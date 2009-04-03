@@ -718,8 +718,9 @@ get_current_position (GnlComposition * comp)
 
   res = gst_pad_query_position (pad, &format, &value);
 
-  if (format != GST_FORMAT_TIME) {
-    GST_WARNING_OBJECT (comp, "query returned a format different from TIME");
+  if (G_UNLIKELY ((res == FALSE) || (format != GST_FORMAT_TIME))) {
+    GST_WARNING_OBJECT (comp,
+        "query failed or returned a format different from TIME");
     value = GST_CLOCK_TIME_NONE;
   } else {
     GST_LOG_OBJECT (comp, "Query returned %" GST_TIME_FORMAT,
