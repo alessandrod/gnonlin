@@ -944,7 +944,7 @@ refine_start_stop_in_region_above_priority (GnlComposition * composition,
     GstClockTime stop,
     GstClockTime * rstart, GstClockTime * rstop, guint32 priority)
 {
-  GList *tmp = composition->private->objects_start;
+  GList *tmp;
   GnlObject *object;
   GstClockTime nstart = start, nstop = stop;
 
@@ -1514,9 +1514,9 @@ no_more_pads_object_cb (GstElement * element, GnlComposition * comp)
       comp->private->childseek = NULL;
 
       /* Check again if this element is still in the stack */
-      if (comp->private->current && (tmp =
-              g_node_find (comp->private->current, G_IN_ORDER, G_TRAVERSE_ALL,
-                  object))) {
+      if (comp->private->current &&
+          g_node_find (comp->private->current, G_IN_ORDER, G_TRAVERSE_ALL,
+              object)) {
 
         /* 3. unblock ghostpad */
         GST_LOG_OBJECT (comp, "About to unblock top-level pad : %s:%s",

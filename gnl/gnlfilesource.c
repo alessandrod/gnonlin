@@ -88,12 +88,10 @@ gnl_filesource_class_init (GnlFileSourceClass * klass)
 {
   GObjectClass *gobject_class;
   GstElementClass *gstelement_class;
-  GnlObjectClass *gnlobject_class;
   GnlSourceClass *gnlsource_class;
 
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
-  gnlobject_class = (GnlObjectClass *) klass;
   gnlsource_class = (GnlSourceClass *) klass;
 
   parent_class = g_type_class_ref (GNL_TYPE_OBJECT);
