@@ -373,15 +373,16 @@ static void
 unblock_childs (GnlComposition * comp)
 {
   GstIterator *childs;
-  GstIteratorResult res;
-  GValue val = { 0 };
 
-  g_value_init (&val, G_TYPE_BOOLEAN);
-  g_value_set_boolean (&val, FALSE);
   childs = gst_bin_iterate_elements (GST_BIN (comp));
-  res =
-      gst_iterator_fold (childs, (GstIteratorFoldFunction) unblock_child_pads,
-      &val, comp);
+
+retry:
+  if (G_UNLIKELY (gst_iterator_fold (childs,
+              (GstIteratorFoldFunction) unblock_child_pads, NULL,
+              comp) == GST_ITERATOR_RESYNC)) {
+    gst_iterator_resync (childs);
+    goto retry;
+  }
   gst_iterator_free (childs);
 }
 
@@ -410,15 +411,15 @@ static void
 unlock_childs (GnlComposition * comp)
 {
   GstIterator *childs;
-  GstIteratorResult res;
-  GValue val = { 0 };
 
-  g_value_init (&val, G_TYPE_BOOLEAN);
-  g_value_set_boolean (&val, FALSE);
   childs = gst_bin_iterate_elements (GST_BIN (comp));
-  res =
-      gst_iterator_fold (childs, (GstIteratorFoldFunction) unlock_child_state,
-      &val, NULL);
+retry:
+  if (G_UNLIKELY (gst_iterator_fold (childs,
+              (GstIteratorFoldFunction) unlock_child_state, NULL,
+              NULL) == GST_ITERATOR_RESYNC)) {
+    gst_iterator_resync (childs);
+    goto retry;
+  }
   gst_iterator_free (childs);
 }
 
@@ -1297,17 +1298,18 @@ gnl_composition_change_state (GstElement * element, GstStateChange transition)
   switch (transition) {
     case GST_STATE_CHANGE_READY_TO_PAUSED:{
       GstIterator *childs;
-      GstIteratorResult res;
-      GValue val = { 0 };
 
       /* state-lock all elements */
       GST_DEBUG_OBJECT (comp,
           "Setting all childs to READY and locking their state");
-      g_value_init (&val, G_TYPE_BOOLEAN);
-      g_value_set_boolean (&val, FALSE);
       childs = gst_bin_iterate_elements (GST_BIN (comp));
-      res = gst_iterator_fold (childs,
-          (GstIteratorFoldFunction) lock_child_state, &val, NULL);
+    retry:
+      if (G_UNLIKELY (gst_iterator_fold (childs,
+                  (GstIteratorFoldFunction) lock_child_state, NULL,
+                  NULL) == GST_ITERATOR_RESYNC)) {
+        gst_iterator_resync (childs);
+        goto retry;
+      }
       gst_iterator_free (childs);
     }
 
