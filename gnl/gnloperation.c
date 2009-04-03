@@ -219,7 +219,7 @@ element_is_valid_filter (GstElement * element, gboolean * isdynamic)
     if (template->direction == GST_PAD_SRC)
       havesrc = TRUE;
     else if (template->direction == GST_PAD_SINK) {
-      if (!havesink && (template->presence == GST_PAD_REQUEST))
+      if (!havesink && (template->presence == GST_PAD_REQUEST) && isdynamic)
         *isdynamic = TRUE;
       havesink = TRUE;
     }
