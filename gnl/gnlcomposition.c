@@ -84,6 +84,11 @@ struct _GnlCompositionPrivate
 
   GnlObject *defaultobject;
 
+  /* TRUE if the stack is valid.
+   * This is meant to prevent the top-level pad to be unblocked before the stack
+   * is fully done. Protected by OBJECTS_LOCK */
+  gboolean stackvalid;
+
   /*
      current segment seek start/stop time. 
      Reconstruct pipeline ONLY if seeking outside of those values
@@ -436,6 +441,8 @@ gnl_composition_reset (GnlComposition * comp)
   if (comp->private->current)
     g_node_destroy (comp->private->current);
   comp->private->current = NULL;
+
+  comp->private->stackvalid = FALSE;
 
   if (comp->private->ghostpad) {
     gnl_object_remove_ghost_pad ((GnlObject *) comp, comp->private->ghostpad);
@@ -1491,7 +1498,8 @@ no_more_pads_object_cb (GstElement * element, GnlComposition * comp)
           comp);
     }
 
-    if (comp->private->current && comp->private->waitingpads == 0) {
+    if (comp->private->current && (comp->private->waitingpads == 0)
+        && comp->private->stackvalid) {
       tpad = get_src_pad (GST_ELEMENT (comp->private->current->data));
 
       /* There are no more waiting pads for the currently configured timeline */
@@ -1972,6 +1980,9 @@ update_pipeline (GnlComposition * comp, GstClockTime currenttime,
       g_node_destroy (comp->private->current);
     comp->private->current = NULL;
 
+    /* invalidate the stack while modifying it */
+    comp->private->stackvalid = FALSE;
+
     COMP_OBJECTS_UNLOCK (comp);
 
     if (deactivate) {
@@ -2007,6 +2018,8 @@ update_pipeline (GnlComposition * comp, GstClockTime currenttime,
       /* There is a valid timeline stack */
 
       COMP_OBJECTS_LOCK (comp);
+
+      comp->private->stackvalid = TRUE;
 
       /* 1. Create new seek event for newly configured timeline stack */
       if (samestack && (startchanged || stopchanged))
