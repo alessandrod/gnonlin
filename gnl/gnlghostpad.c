@@ -92,7 +92,10 @@ translate_incoming_seek (GnlObject * object, GstEvent * event)
     goto invalid_format;
 
   /* convert rate */
-  nrate = rate * object->rate;
+  if (G_LIKELY (object->rate_1))
+    nrate = rate;
+  else
+    nrate = rate * object->rate;
   GST_DEBUG ("nrate:%f , rate:%f, object->rate:%f", nrate, rate, object->rate);
 
   /* convert cur */

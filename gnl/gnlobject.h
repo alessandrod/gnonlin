@@ -82,6 +82,8 @@ struct _GnlObject
 
   /* read-only */
   gdouble rate;
+  /* TRUE if rate == 1.0 */
+  gboolean rate_1;
 
   /* priority in parent */
   guint32 priority;
