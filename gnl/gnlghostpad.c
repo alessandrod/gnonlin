@@ -85,9 +85,8 @@ translate_incoming_seek (GnlObject * object, GstEvent * event)
       GST_TIME_FORMAT " -- %" GST_TIME_FORMAT, rate, format, flags, curtype,
       stoptype, GST_TIME_ARGS (cur), GST_TIME_ARGS (stop));
 
-  if G_UNLIKELY
-    (format != GST_FORMAT_TIME)
-        goto invalid_format;
+  if (G_UNLIKELY (format != GST_FORMAT_TIME))
+    goto invalid_format;
 
   /* convert rate */
   nrate = rate * object->rate;
@@ -95,9 +94,8 @@ translate_incoming_seek (GnlObject * object, GstEvent * event)
 
   /* convert cur */
   ncurtype = GST_SEEK_TYPE_SET;
-  if G_LIKELY
-    ((curtype == GST_SEEK_TYPE_SET)
-        && (gnl_object_to_media_time (object, cur, &ncur))) {
+  if (G_LIKELY ((curtype == GST_SEEK_TYPE_SET)
+          && (gnl_object_to_media_time (object, cur, &ncur)))) {
     /* cur is TYPE_SET and value is valid */
     if (ncur > G_MAXINT64)
       GST_WARNING_OBJECT (object, "return value too big...");
@@ -113,9 +111,8 @@ translate_incoming_seek (GnlObject * object, GstEvent * event)
   }
 
   /* convert stop, we also need to limit it to object->stop */
-  if G_LIKELY
-    ((stoptype == GST_SEEK_TYPE_SET)
-        && (gnl_object_to_media_time (object, stop, &nstop))) {
+  if (G_LIKELY ((stoptype == GST_SEEK_TYPE_SET)
+          && (gnl_object_to_media_time (object, stop, &nstop)))) {
     if (nstop > G_MAXINT64)
       GST_WARNING_OBJECT (object, "return value too big...");
     GST_LOG_OBJECT (object, "Setting stop to %" GST_TIME_FORMAT,
@@ -131,8 +128,7 @@ translate_incoming_seek (GnlObject * object, GstEvent * event)
 
 
   /* add accurate seekflags */
-  if G_UNLIKELY
-    (!(flags & GST_SEEK_FLAG_ACCURATE)) {
+  if (G_UNLIKELY (!(flags & GST_SEEK_FLAG_ACCURATE))) {
     GST_DEBUG_OBJECT (object, "Adding GST_SEEK_FLAG_ACCURATE");
     flags |= GST_SEEK_FLAG_ACCURATE;
   } else {
@@ -190,18 +186,16 @@ translate_outgoing_new_segment (GnlObject * object, GstEvent * event)
       GST_TIME_FORMAT, GST_TIME_ARGS (start), GST_TIME_ARGS (stop),
       GST_TIME_ARGS (stream));
 
-  if G_UNLIKELY
-    (format != GST_FORMAT_TIME) {
+  if (G_UNLIKELY (format != GST_FORMAT_TIME)) {
     GST_WARNING_OBJECT (object,
         "Can't translate newsegments with format != GST_FORMAT_TIME");
     return event;
-    }
+  }
 
   gnl_media_to_object_time (object, stream, &nstream);
 
-  if G_UNLIKELY
-    (nstream > G_MAXINT64)
-        GST_WARNING_OBJECT (object, "Return value too big...");
+  if (G_UNLIKELY (nstream > G_MAXINT64))
+    GST_WARNING_OBJECT (object, "Return value too big...");
 
   GST_DEBUG_OBJECT (object,
       "Sending NEWSEGMENT %" GST_TIME_FORMAT " -- %" GST_TIME_FORMAT " // %"
@@ -224,12 +218,11 @@ internalpad_event_function (GstPad * internal, GstEvent * event)
 
   GST_DEBUG_OBJECT (internal, "event:%s", GST_EVENT_TYPE_NAME (event));
 
-  if G_UNLIKELY
-    (!(priv->eventfunc)) {
+  if (G_UNLIKELY (!(priv->eventfunc))) {
     GST_WARNING_OBJECT (internal,
         "priv->eventfunc == NULL !! What is going on ?");
     return FALSE;
-    }
+  }
 
   switch (priv->dir) {
     case GST_PAD_SRC:
@@ -268,19 +261,18 @@ translate_incoming_position_query (GnlObject * object, GstQuery * query)
   gint64 cur, cur2;
 
   gst_query_parse_position (query, &format, &cur);
-  if G_UNLIKELY
-    (format != GST_FORMAT_TIME) {
+  if (G_UNLIKELY (format != GST_FORMAT_TIME)) {
     GST_WARNING_OBJECT (object,
         "position query is in a format different from time, returning without modifying values");
     goto beach;
-    }
+  }
 
-  if G_UNLIKELY
-    (!(gnl_media_to_object_time (object, (guint64) cur, (guint64 *) & cur2))) {
+  if (G_UNLIKELY (!(gnl_media_to_object_time (object, (guint64) cur,
+                  (guint64 *) & cur2)))) {
     GST_WARNING_OBJECT (object,
         "Couldn't get object time for %" GST_TIME_FORMAT, GST_TIME_ARGS (cur));
     goto beach;
-    }
+  }
 
   gst_query_set_position (query, GST_FORMAT_TIME, cur2);
 
@@ -295,12 +287,11 @@ translate_incoming_duration_query (GnlObject * object, GstQuery * query)
   gint64 cur;
 
   gst_query_parse_duration (query, &format, &cur);
-  if G_UNLIKELY
-    (format != GST_FORMAT_TIME) {
+  if (G_UNLIKELY (format != GST_FORMAT_TIME)) {
     GST_WARNING_OBJECT (object,
         "We can only handle duration queries in GST_FORMAT_TIME");
     return FALSE;
-    }
+  }
 
   gst_query_set_duration (query, GST_FORMAT_TIME, object->duration);
 
