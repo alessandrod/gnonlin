@@ -167,10 +167,87 @@ invalid_format:
 static GstEvent *
 translate_outgoing_seek (GnlObject * object, GstEvent * event)
 {
-  GST_DEBUG_OBJECT (object,
-      "TODO shifting cur/stop/rate of seek event to container time domain");
+  GstEvent *event2;
+  GstFormat format;
+  gdouble rate, nrate;
+  GstSeekFlags flags;
+  GstSeekType curtype, stoptype;
+  GstSeekType ncurtype;
+  gint64 cur;
+  guint64 ncur;
+  gint64 stop;
+  guint64 nstop;
 
-  return event;
+  gst_event_parse_seek (event, &rate, &format, &flags,
+      &curtype, &cur, &stoptype, &stop);
+
+  GST_DEBUG_OBJECT (object,
+      "GOT SEEK rate:%f, format:%d, flags:%d, curtype:%d, stoptype:%d, %"
+      GST_TIME_FORMAT " -- %" GST_TIME_FORMAT, rate, format, flags, curtype,
+      stoptype, GST_TIME_ARGS (cur), GST_TIME_ARGS (stop));
+
+  if (G_UNLIKELY (format != GST_FORMAT_TIME))
+    goto invalid_format;
+
+  /* convert rate */
+  if (G_LIKELY (object->rate_1))
+    nrate = rate;
+  else
+    nrate = rate / object->rate;
+  GST_DEBUG ("nrate:%f , rate:%f, object->rate:%f", nrate, rate, object->rate);
+
+  /* convert cur */
+  ncurtype = GST_SEEK_TYPE_SET;
+  if (G_LIKELY ((curtype == GST_SEEK_TYPE_SET)
+          && (gnl_media_to_object_time (object, cur, &ncur)))) {
+    /* cur is TYPE_SET and value is valid */
+    if (ncur > G_MAXINT64)
+      GST_WARNING_OBJECT (object, "return value too big...");
+    GST_LOG_OBJECT (object, "Setting cur to %" GST_TIME_FORMAT,
+        GST_TIME_ARGS (ncur));
+  } else if ((curtype != GST_SEEK_TYPE_NONE)) {
+    GST_DEBUG_OBJECT (object, "Limiting seek start to start");
+    ncur = object->start;
+  } else {
+    GST_DEBUG_OBJECT (object, "leaving GST_SEEK_TYPE_NONE");
+    ncur = cur;
+    ncurtype = GST_SEEK_TYPE_NONE;
+  }
+
+  /* convert stop, we also need to limit it to object->stop */
+  if (G_LIKELY ((stoptype == GST_SEEK_TYPE_SET)
+          && (gnl_media_to_object_time (object, stop, &nstop)))) {
+    if (nstop > G_MAXINT64)
+      GST_WARNING_OBJECT (object, "return value too big...");
+    GST_LOG_OBJECT (object, "Setting stop to %" GST_TIME_FORMAT,
+        GST_TIME_ARGS (nstop));
+  } else {
+    GST_DEBUG_OBJECT (object, "Limiting end of seek to stop");
+    nstop = object->stop;
+    if (nstop > G_MAXINT64)
+      GST_WARNING_OBJECT (object, "return value too big...");
+    GST_LOG_OBJECT (object, "Setting stop to %" GST_TIME_FORMAT,
+        GST_TIME_ARGS (nstop));
+  }
+
+  GST_DEBUG_OBJECT (object,
+      "SENDING SEEK rate:%f, format:TIME, flags:%d, curtype:%d, stoptype:SET, %"
+      GST_TIME_FORMAT " -- %" GST_TIME_FORMAT, nrate, flags, ncurtype,
+      GST_TIME_ARGS (ncur), GST_TIME_ARGS (nstop));
+
+  event2 = gst_event_new_seek (nrate, GST_FORMAT_TIME, flags,
+      ncurtype, (gint64) ncur, GST_SEEK_TYPE_SET, (gint64) nstop);
+
+  gst_event_unref (event);
+
+  return event2;
+
+  /* ERRORS */
+invalid_format:
+  {
+    GST_WARNING ("GNonLin time shifting only works with GST_FORMAT_TIME");
+    return event;
+  }
 }
 
 static GstEvent *
@@ -215,6 +292,51 @@ translate_outgoing_new_segment (GnlObject * object, GstEvent * event)
   return event2;
 }
 
+static GstEvent *
+translate_incoming_new_segment (GnlObject * object, GstEvent * event)
+{
+  GstEvent *event2;
+  gboolean update;
+  gdouble rate;
+  GstFormat format;
+  gint64 start, stop, stream;
+  guint64 nstream;
+
+  /* only modify the streamtime */
+  gst_event_parse_new_segment (event, &update, &rate, &format,
+      &start, &stop, &stream);
+
+  GST_DEBUG_OBJECT (object,
+      "Got NEWSEGMENT %" GST_TIME_FORMAT " -- %" GST_TIME_FORMAT " // %"
+      GST_TIME_FORMAT, GST_TIME_ARGS (start), GST_TIME_ARGS (stop),
+      GST_TIME_ARGS (stream));
+
+  if (G_UNLIKELY (format != GST_FORMAT_TIME)) {
+    GST_WARNING_OBJECT (object,
+        "Can't translate newsegments with format != GST_FORMAT_TIME");
+    return event;
+  }
+
+  if (!gnl_object_to_media_time (object, stream, &nstream)) {
+    GST_DEBUG ("Can't convert media_time, using 0");
+    nstream = 0;
+  };
+
+  if (G_UNLIKELY (nstream > G_MAXINT64))
+    GST_WARNING_OBJECT (object, "Return value too big...");
+
+  GST_DEBUG_OBJECT (object,
+      "Sending NEWSEGMENT %" GST_TIME_FORMAT " -- %" GST_TIME_FORMAT " // %"
+      GST_TIME_FORMAT, GST_TIME_ARGS (start), GST_TIME_ARGS (stop),
+      GST_TIME_ARGS (nstream));
+  event2 =
+      gst_event_new_new_segment (update, rate, format, start, stop,
+      (gint64) nstream);
+  gst_event_unref (event);
+
+  return event2;
+}
+
 static gboolean
 internalpad_event_function (GstPad * internal, GstEvent * event)
 {
@@ -231,17 +353,27 @@ internalpad_event_function (GstPad * internal, GstEvent * event)
   }
 
   switch (priv->dir) {
-    case GST_PAD_SRC:
-      if (GST_EVENT_TYPE (event) == GST_EVENT_NEWSEGMENT) {
-        event = translate_outgoing_new_segment (object, event);
+    case GST_PAD_SRC:{
+      switch (GST_EVENT_TYPE (event)) {
+        case GST_EVENT_NEWSEGMENT:
+          event = translate_outgoing_new_segment (object, event);
+          break;
+        default:
+          break;
       }
 
       break;
-    case GST_PAD_SINK:
-      if (GST_EVENT_TYPE (event) == GST_EVENT_SEEK) {
-        event = translate_outgoing_seek (object, event);
+    }
+    case GST_PAD_SINK:{
+      switch (GST_EVENT_TYPE (event)) {
+        case GST_EVENT_SEEK:
+          event = translate_outgoing_seek (object, event);
+          break;
+        default:
+          break;
       }
       break;
+    }
     default:
       break;
   }
@@ -352,6 +484,16 @@ ghostpad_event_function (GstPad * ghostpad, GstEvent * event)
           break;
         case GST_EVENT_QOS:
           event = translate_incoming_qos (object, event);
+          break;
+        default:
+          break;
+      }
+    }
+      break;
+    case GST_PAD_SINK:{
+      switch (GST_EVENT_TYPE (event)) {
+        case GST_EVENT_NEWSEGMENT:
+          event = translate_incoming_new_segment (object, event);
           break;
         default:
           break;
