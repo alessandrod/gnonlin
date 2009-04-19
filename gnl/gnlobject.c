@@ -575,7 +575,6 @@ internalpad_event_function (GstPad * internal, GstEvent * event)
 {
   GnlPadPrivate *priv = gst_pad_get_element_private (internal);
   GnlObject *object = priv->object;
-  GstMessage *message = NULL;
   gboolean res;
 
   GST_DEBUG_OBJECT (internal, "event:%s", GST_EVENT_TYPE_NAME (event));
@@ -590,8 +589,6 @@ internalpad_event_function (GstPad * internal, GstEvent * event)
     case GST_PAD_SRC:
       if (GST_EVENT_TYPE (event) == GST_EVENT_NEWSEGMENT) {
         event = translate_outgoing_new_segment (object, event);
-        message = gst_message_new_segment_start (GST_OBJECT (object),
-            GST_FORMAT_TIME, (gint64) object->start);
       }
 
       break;
@@ -605,8 +602,6 @@ internalpad_event_function (GstPad * internal, GstEvent * event)
   }
   GST_DEBUG_OBJECT (internal, "Calling priv->eventfunc %p", priv->eventfunc);
   res = priv->eventfunc (internal, event);
-  if (message)
-    gst_element_post_message (GST_ELEMENT (object), message);
 
   return res;
 }
