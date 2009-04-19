@@ -44,6 +44,8 @@ gboolean gnl_object_ghost_pad_set_target (GnlObject * object,
 
 void gnl_object_remove_ghost_pad (GnlObject * object, GstPad * ghost);
 
+void gnl_init_ghostpad_category ();
+
 G_END_DECLS
 
 #endif /* __GNL_GHOSTPAD_H__ */

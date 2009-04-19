@@ -23,6 +23,9 @@
 
 #include "gnl.h"
 
+GST_DEBUG_CATEGORY_STATIC (gnlghostpad);
+#define GST_CAT_DEFAULT gnlghostpad
+
 typedef struct _GnlPadPrivate GnlPadPrivate;
 
 struct _GnlPadPrivate
@@ -602,4 +605,12 @@ gnl_object_ghost_pad_set_target (GnlObject * object, GstPad * ghost,
     control_internal_pad (ghost, object);
 
   return TRUE;
+}
+
+void
+gnl_init_ghostpad_category ()
+{
+  GST_DEBUG_CATEGORY_INIT (gnlghostpad, "gnlghostpad",
+      GST_DEBUG_FG_BLUE | GST_DEBUG_BOLD, "GNonLin GhostPad");
+
 }
