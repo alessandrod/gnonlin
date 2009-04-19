@@ -78,9 +78,6 @@ static void
 gnl_object_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
-static gboolean
-gnl_object_covers_func (GnlObject * object,
-    GstClockTime start, GstClockTime stop, GnlCoverType type);
 static GstStateChangeReturn
 gnl_object_change_state (GstElement * element, GstStateChange transition);
 
@@ -115,7 +112,6 @@ gnl_object_class_init (GnlObjectClass * klass)
 
   gstelement_class->change_state = GST_DEBUG_FUNCPTR (gnl_object_change_state);
 
-  gnlobject_class->covers = GST_DEBUG_FUNCPTR (gnl_object_covers_func);
   gnlobject_class->prepare = GST_DEBUG_FUNCPTR (gnl_object_prepare_func);
   gnlobject_class->cleanup = GST_DEBUG_FUNCPTR (gnl_object_cleanup_func);
 
@@ -309,46 +305,6 @@ gnl_media_to_object_time (GnlObject * object, GstClockTime mtime,
   GST_DEBUG_OBJECT (object, "Returning ObjectTime : %" GST_TIME_FORMAT,
       GST_TIME_ARGS (*otime));
   return TRUE;
-}
-
-static gboolean
-gnl_object_covers_func (GnlObject * object,
-    GstClockTime start, GstClockTime stop, GnlCoverType type)
-{
-  gboolean ret = FALSE;
-
-  GST_DEBUG_OBJECT (object,
-      "start:%" GST_TIME_FORMAT ", stop:%" GST_TIME_FORMAT ", type:%d",
-      GST_TIME_ARGS (start), GST_TIME_ARGS (stop), type);
-
-  /* FIXME: BOGUS, REMOVE */
-  gnl_media_to_object_time (object, 0, NULL);
-
-  switch (type) {
-    case GNL_COVER_ALL:
-    case GNL_COVER_SOME:
-      if ((start <= object->start) && (stop >= object->stop))
-        ret = TRUE;
-      break;
-    case GNL_COVER_START:
-      if ((start >= object->start) && (start < object->stop))
-        ret = TRUE;
-      break;
-    case GNL_COVER_STOP:
-      if ((stop >= object->start) && (stop < object->stop))
-        ret = TRUE;
-      break;
-    default:
-      break;
-  }
-  return ret;
-};
-
-gboolean
-gnl_object_covers (GnlObject * object, GstClockTime start,
-    GstClockTime stop, GnlCoverType type)
-{
-  return GNL_OBJECT_GET_CLASS (object)->covers (object, start, stop, type);
 }
 
 static gboolean
