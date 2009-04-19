@@ -216,8 +216,7 @@ gnl_object_to_media_time (GnlObject * object, GstClockTime otime,
       GST_TIME_ARGS (object->media_start), GST_TIME_ARGS (object->media_stop));
 
   /* limit check */
-  if G_UNLIKELY
-    ((otime < object->start) || (otime >= object->stop)) {
+  if (G_UNLIKELY ((otime < object->start) || (otime >= object->stop))) {
     GST_DEBUG_OBJECT (object, "ObjectTime is outside object start/stop times");
     if (otime < object->start) {
       *mtime =
@@ -232,10 +231,9 @@ gnl_object_to_media_time (GnlObject * object, GstClockTime otime,
         *mtime = object->stop;
     }
     return FALSE;
-    }
+  }
 
-  if G_UNLIKELY
-    (object->media_start == GST_CLOCK_TIME_NONE) {
+  if (G_UNLIKELY (object->media_start == GST_CLOCK_TIME_NONE)) {
     /* no time shifting, for live sources ? */
     *mtime = otime;
   } else {
@@ -278,19 +276,16 @@ gnl_media_to_object_time (GnlObject * object, GstClockTime mtime,
 
 
   /* limit check */
-  if G_UNLIKELY
-    (object->media_start == GST_CLOCK_TIME_NONE)
-        return gnl_object_to_media_time (object, mtime, otime);
+  if (G_UNLIKELY (object->media_start == GST_CLOCK_TIME_NONE))
+    return gnl_object_to_media_time (object, mtime, otime);
 
-  if G_UNLIKELY
-    (mtime < object->media_start) {
+  if (G_UNLIKELY (mtime < object->media_start)) {
     GST_DEBUG_OBJECT (object,
         "media time is before media_start, forcing to start");
     *otime = object->start;
     return FALSE;
-  } else if G_UNLIKELY
-    ((object->media_stop != GST_CLOCK_TIME_NONE)
-        && (mtime >= object->media_stop)) {
+  } else if (G_UNLIKELY ((object->media_stop != GST_CLOCK_TIME_NONE)
+          && (mtime >= object->media_stop))) {
     GST_DEBUG_OBJECT (object,
         "media time is at or after media_stop, forcing to stop");
     *otime = object->stop;
