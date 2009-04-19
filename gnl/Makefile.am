@@ -4,6 +4,7 @@ libgnl_la_SOURCES =		\
 	gnl.c			\
 	gnlobject.c		\
 	gnlcomposition.c	\
+	gnlghostpad.c		\
 	gnloperation.c		\
 	gnlsource.c		\
 	gnlfilesource.c
@@ -17,6 +18,7 @@ gnl_headers =			\
 	gnlobject.h		\
 	gnlcomposition.h	\
 	gnltypes.h		\
+	gnlghostpad.h		\
 	gnloperation.h		\
 	gnlsource.h		\
 	gnltypes.h		\

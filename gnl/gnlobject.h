@@ -110,21 +110,6 @@ struct _GnlObjectClass
 
 GType gnl_object_get_type (void);
 
-GstPad *gnl_object_ghost_pad (GnlObject * object,
-    const gchar * name, GstPad * target);
-
-GstPad *gnl_object_ghost_pad_full (GnlObject * object,
-    const gchar * name, GstPad * target, gboolean flush_hack);
-
-
-GstPad *gnl_object_ghost_pad_no_target (GnlObject * object,
-    const gchar * name, GstPadDirection dir);
-
-gboolean gnl_object_ghost_pad_set_target (GnlObject * object,
-    GstPad * ghost, GstPad * target);
-
-void gnl_object_remove_ghost_pad (GnlObject * object, GstPad * ghost);
-
 gboolean
 gnl_object_to_media_time (GnlObject * object, GstClockTime otime,
 			  GstClockTime * mtime);
