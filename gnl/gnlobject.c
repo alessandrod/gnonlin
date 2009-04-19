@@ -220,8 +220,7 @@ gnl_object_to_media_time (GnlObject * object, GstClockTime otime,
   if (G_UNLIKELY ((otime < object->start))) {
     GST_DEBUG_OBJECT (object, "ObjectTime is before start");
     *mtime =
-        (object->media_start ==
-        GST_CLOCK_TIME_NONE) ? object->start : object->media_start;
+        (object->media_start == GST_CLOCK_TIME_NONE) ? 0 : object->media_start;
     return FALSE;
   }
   if (G_UNLIKELY ((otime >= object->stop))) {
@@ -231,13 +230,13 @@ gnl_object_to_media_time (GnlObject * object, GstClockTime otime,
     else if (GST_CLOCK_TIME_IS_VALID (object->media_start))
       *mtime = object->media_start + object->duration;
     else
-      *mtime = object->stop;
+      *mtime = object->stop - object->start;
     return FALSE;
   }
 
   if (G_UNLIKELY (object->media_start == GST_CLOCK_TIME_NONE)) {
     /* no time shifting, for live sources ? */
-    *mtime = otime;
+    *mtime = otime - object->start;
   } else if (G_LIKELY (object->rate_1)) {
     *mtime = otime - object->start + object->media_start;
   } else {
@@ -280,10 +279,8 @@ gnl_media_to_object_time (GnlObject * object, GstClockTime mtime,
 
 
   /* limit check */
-  if (G_UNLIKELY (object->media_start == GST_CLOCK_TIME_NONE))
-    return gnl_object_to_media_time (object, mtime, otime);
-
-  if (G_UNLIKELY (mtime < object->media_start)) {
+  if (G_UNLIKELY ((object->media_start != GST_CLOCK_TIME_NONE)
+          && (mtime < object->media_start))) {
     GST_DEBUG_OBJECT (object,
         "media time is before media_start, forcing to start");
     *otime = object->start;
@@ -297,9 +294,11 @@ gnl_media_to_object_time (GnlObject * object, GstClockTime mtime,
     return FALSE;
   }
 
-  if (G_LIKELY (object->rate_1)) {
+  if (G_LIKELY (object->rate_1 && (object->media_start != GST_CLOCK_TIME_NONE))) {
     *otime = mtime - object->media_start + object->start;
-  } else
+  } else if (object->media_start == GST_CLOCK_TIME_NONE)
+    *otime = mtime + object->start;
+  else
     *otime = (mtime - object->media_start) / object->rate + object->start;
 
   GST_DEBUG_OBJECT (object, "Returning ObjectTime : %" GST_TIME_FORMAT,
