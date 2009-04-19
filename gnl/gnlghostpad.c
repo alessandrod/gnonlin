@@ -67,6 +67,34 @@ translate_incoming_qos (GnlObject * object, GstEvent * event)
 }
 
 static GstEvent *
+translate_outgoing_qos (GnlObject * object, GstEvent * event)
+{
+  gdouble prop;
+  GstClockTimeDiff diff;
+  GstClockTime timestamp, timestamp2;
+  GstEvent *event2 = NULL;
+
+  gst_event_parse_qos (event, &prop, &diff, &timestamp);
+
+  GST_DEBUG_OBJECT (object,
+      "incoming qos prop:%f, diff:%" G_GINT64_FORMAT
+      ", timestamp:%" GST_TIME_FORMAT, prop, diff, GST_TIME_ARGS (timestamp));
+
+  if (!(gnl_media_to_object_time (object, timestamp, &timestamp2)) ||
+      ((diff < 0) && (-diff > timestamp))) {
+    GST_DEBUG ("Invalid timestamp, discarding event");
+    gst_event_unref (event);
+  } else {
+    GST_DEBUG_OBJECT (object,
+        "translated qos prop:%f, diff:%" G_GINT64_FORMAT
+        ", timestamp:%" GST_TIME_FORMAT, prop, diff,
+        GST_TIME_ARGS (timestamp2));
+    event2 = gst_event_new_qos (prop, diff, timestamp2);
+  }
+  return event2;
+}
+
+static GstEvent *
 translate_incoming_seek (GnlObject * object, GstEvent * event)
 {
   GstEvent *event2;
@@ -369,6 +397,8 @@ internalpad_event_function (GstPad * internal, GstEvent * event)
         case GST_EVENT_SEEK:
           event = translate_outgoing_seek (object, event);
           break;
+        case GST_EVENT_QOS:
+          event = translate_outgoing_qos (object, event);
         default:
           break;
       }
@@ -405,10 +435,34 @@ translate_incoming_position_query (GnlObject * object, GstQuery * query)
     goto beach;
   }
 
-  if (G_UNLIKELY (!(gnl_media_to_object_time (object, (guint64) cur,
+  gnl_media_to_object_time (object, (guint64) cur, (guint64 *) & cur2);
+
+  GST_DEBUG_OBJECT (object,
+      "Adjust position from %" GST_TIME_FORMAT " to %" GST_TIME_FORMAT,
+      GST_TIME_ARGS (cur), GST_TIME_ARGS (cur2));
+  gst_query_set_position (query, GST_FORMAT_TIME, cur2);
+
+beach:
+  return TRUE;
+}
+
+static gboolean
+translate_outgoing_position_query (GnlObject * object, GstQuery * query)
+{
+  GstFormat format;
+  gint64 cur, cur2;
+
+  gst_query_parse_position (query, &format, &cur);
+  if (G_UNLIKELY (format != GST_FORMAT_TIME)) {
+    GST_WARNING_OBJECT (object,
+        "position query is in a format different from time, returning without modifying values");
+    goto beach;
+  }
+
+  if (G_UNLIKELY (!(gnl_object_to_media_time (object, (guint64) cur,
                   (guint64 *) & cur2)))) {
     GST_WARNING_OBJECT (object,
-        "Couldn't get object time for %" GST_TIME_FORMAT, GST_TIME_ARGS (cur));
+        "Couldn't get media time for %" GST_TIME_FORMAT, GST_TIME_ARGS (cur));
     goto beach;
   }
 
@@ -443,6 +497,8 @@ static gboolean
 internalpad_query_function (GstPad * internal, GstQuery * query)
 {
   GnlPadPrivate *priv = gst_pad_get_element_private (internal);
+  GnlObject *object = priv->object;
+  gboolean ret;
 
   GST_DEBUG_OBJECT (internal, "querytype:%d", GST_QUERY_TYPE (query));
 
@@ -452,15 +508,25 @@ internalpad_query_function (GstPad * internal, GstQuery * query)
     return FALSE;
   }
 
-  switch (priv->dir) {
-    case GST_PAD_SRC:
-      break;
-    case GST_PAD_SINK:
-      break;
-    default:
-      break;
+  if ((ret = priv->queryfunc (internal, query))) {
+
+    switch (priv->dir) {
+      case GST_PAD_SRC:
+        break;
+      case GST_PAD_SINK:
+        switch (GST_QUERY_TYPE (query)) {
+          case GST_QUERY_POSITION:
+            ret = translate_outgoing_position_query (object, query);
+            break;
+          default:
+            break;
+        }
+        break;
+      default:
+        break;
+    }
   }
-  return priv->queryfunc (internal, query);
+  return ret;
 }
 
 static gboolean
