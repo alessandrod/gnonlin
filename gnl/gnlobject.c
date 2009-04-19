@@ -89,8 +89,6 @@ static gboolean gnl_object_cleanup_func (GnlObject * object);
 
 static GstStateChangeReturn gnl_object_prepare (GnlObject * object);
 
-static void gnl_object_handle_message (GstBin * bin, GstMessage * message);
-
 static void
 gnl_object_base_init (gpointer g_class G_GNUC_UNUSED)
 {
@@ -102,12 +100,10 @@ gnl_object_class_init (GnlObjectClass * klass)
 {
   GObjectClass *gobject_class;
   GstElementClass *gstelement_class;
-  GstBinClass *gstbin_class;
   GnlObjectClass *gnlobject_class;
 
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
-  gstbin_class = (GstBinClass *) klass;
   gnlobject_class = (GnlObjectClass *) klass;
 
   GST_DEBUG_CATEGORY_INIT (gnlobject, "gnlobject",
@@ -118,8 +114,6 @@ gnl_object_class_init (GnlObjectClass * klass)
   gobject_class->dispose = GST_DEBUG_FUNCPTR (gnl_object_dispose);
 
   gstelement_class->change_state = GST_DEBUG_FUNCPTR (gnl_object_change_state);
-
-  gstbin_class->handle_message = GST_DEBUG_FUNCPTR (gnl_object_handle_message);
 
   gnlobject_class->covers = GST_DEBUG_FUNCPTR (gnl_object_covers_func);
   gnlobject_class->prepare = GST_DEBUG_FUNCPTR (gnl_object_prepare_func);
@@ -974,96 +968,6 @@ gnl_object_ghost_pad_set_target (GnlObject * object, GstPad * ghost,
     control_internal_pad (ghost, object);
 
   return TRUE;
-}
-
-static GstMessage *
-translate_message_segment_start (GnlObject * object, GstMessage * message)
-{
-  GstFormat format;
-  gint64 position;
-  guint64 pos2;
-  GstMessage *message2;
-
-  gst_message_parse_segment_start (message, &format, &position);
-  if (format != GST_FORMAT_TIME)
-    return message;
-  GST_LOG_OBJECT (object, "format:%d, position:%" GST_TIME_FORMAT,
-      format, GST_TIME_ARGS (position));
-  gnl_media_to_object_time (object, position, &pos2);
-  if (pos2 > G_MAXINT64) {
-    g_warning ("getting values too big...");
-    return message;
-  }
-  message2 = gst_message_new_segment_start (GST_MESSAGE_SRC (message),
-      format, (gint64) pos2);
-  gst_message_unref (message);
-  return message2;
-}
-
-static GstMessage *
-translate_message_segment_done (GnlObject * object, GstMessage * message)
-{
-  GstFormat format;
-  gint64 position;
-  guint64 pos2;
-  GstMessage *message2;
-
-  gst_message_parse_segment_done (message, &format, &position);
-
-  GST_LOG_OBJECT (object, "format:%d, position:%" GST_TIME_FORMAT,
-      format, GST_TIME_ARGS (position));
-
-  if (format != GST_FORMAT_TIME) {
-    GST_WARNING_OBJECT (object,
-        "Got SEGMENT_DONE with format different from TIME");
-
-    if (GST_CLOCK_TIME_IS_VALID (object->media_stop)) {
-      GST_WARNING_OBJECT (object, "Bumping to object->media_stop");
-      position = (gint64) object->media_stop;
-      format = GST_FORMAT_TIME;
-    } else {
-      GST_WARNING_OBJECT (object, "Bumping to object->stop");
-      message2 = gst_message_new_segment_done (GST_MESSAGE_SRC (message),
-          GST_FORMAT_TIME, (gint64) object->stop);
-      goto beach;
-    }
-  }
-
-  gnl_media_to_object_time (object, position, &pos2);
-  if (pos2 > G_MAXINT64) {
-    g_warning ("getting values too big...");
-    return message;
-  }
-  message2 = gst_message_new_segment_done (GST_MESSAGE_SRC (message),
-      format, (gint64) pos2);
-beach:
-  gst_message_unref (message);
-  return message2;
-
-}
-
-static void
-gnl_object_handle_message (GstBin * bin, GstMessage * message)
-{
-  GnlObject *object = (GnlObject *) bin;
-
-  GST_DEBUG_OBJECT (object, "message:%s",
-      gst_message_type_get_name (GST_MESSAGE_TYPE (message)));
-
-  switch (GST_MESSAGE_TYPE (message)) {
-    case GST_MESSAGE_SEGMENT_START:
-      /* translate outgoing segment_start */
-      message = translate_message_segment_start (object, message);
-      break;
-    case GST_MESSAGE_SEGMENT_DONE:
-      /* translate outgoing segment_done */
-      message = translate_message_segment_done (object, message);
-      break;
-    default:
-      break;
-  }
-
-  GST_BIN_CLASS (parent_class)->handle_message (bin, message);
 }
 
 static void
