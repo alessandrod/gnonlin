@@ -412,6 +412,9 @@ translate_incoming_position_query (GnlObject * object, GstQuery * query)
     goto beach;
   }
 
+  GST_DEBUG_OBJECT (object,
+      "Adjust position from %" GST_TIME_FORMAT " to %" GST_TIME_FORMAT,
+      GST_TIME_ARGS (cur), GST_TIME_ARGS (cur2));
   gst_query_set_position (query, GST_FORMAT_TIME, cur2);
 
 beach:
@@ -529,7 +532,7 @@ ghostpad_query_function (GstPad * ghostpad, GstQuery * query)
   GnlObject *object = GNL_OBJECT (GST_PAD_PARENT (ghostpad));
   gboolean pret = TRUE;
 
-  GST_DEBUG_OBJECT (ghostpad, "querytype:%d", GST_QUERY_TYPE (query));
+  GST_DEBUG_OBJECT (ghostpad, "querytype:%s", GST_QUERY_TYPE_NAME (query));
 
   switch (GST_QUERY_TYPE (query)) {
     case GST_QUERY_DURATION:
