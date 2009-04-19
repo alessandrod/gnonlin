@@ -106,47 +106,130 @@ gnl_object_class_init (GnlObjectClass * klass)
   gnlobject_class->cleanup = GST_DEBUG_FUNCPTR (gnl_object_cleanup_func);
 
   /**
-   * GnlObject:start:
+   * GnlObject:start
    *
+   * The start position relative to the parent in nanoseconds.
    */
   g_object_class_install_property (gobject_class, ARG_START,
       g_param_spec_uint64 ("start", "Start",
           "The start position relative to the parent",
           0, G_MAXUINT64, 0, G_PARAM_READWRITE));
+
+  /**
+   * GnlObject:duration
+   *
+   * The outgoing duration in nanoseconds.
+   */
   g_object_class_install_property (gobject_class, ARG_DURATION,
       g_param_spec_int64 ("duration", "Duration",
           "Outgoing duration", 0, G_MAXINT64, 0, G_PARAM_READWRITE));
+
+  /**
+   * GnlObject:stop
+   *
+   * The stop position relative to the parent in nanoseconds.
+   *
+   * This value is computed based on the values of start and duration.
+   */
   g_object_class_install_property (gobject_class, ARG_STOP,
       g_param_spec_uint64 ("stop", "Stop",
           "The stop position relative to the parent",
           0, G_MAXUINT64, 0, G_PARAM_READABLE));
 
+  /**
+   * GnlObject:media_start
+   *
+   * The media start position in nanoseconds.
+   *
+   * Also called 'in-point' in video-editing, this corresponds to
+   * what position in the 'contained' object we should start outputting from.
+   */
   g_object_class_install_property (gobject_class, ARG_MEDIA_START,
       g_param_spec_uint64 ("media_start", "Media start",
           "The media start position",
           0, G_MAXUINT64, GST_CLOCK_TIME_NONE, G_PARAM_READWRITE));
+
+  /**
+   * GnlObject:media_duration
+   *
+   * The media's duration in nanoseconds.
+   *
+   * This correspond to the 'contained' object's duration we will be
+   * outputting for.
+   */
   g_object_class_install_property (gobject_class, ARG_MEDIA_DURATION,
       g_param_spec_int64 ("media_duration", "Media duration",
           "Duration of the media, can be negative",
           G_MININT64, G_MAXINT64, 0, G_PARAM_READWRITE));
+
+  /**
+   * GnlObject:media_stop
+   *
+   * The media stop position in nanoseconds.
+   *
+   * Also called 'out-point' in video-editing, this corresponds to the
+   * position in the 'contained' object we should output until.
+   *
+   * This value is read-only, and is computed from the media_start and
+   * media_duration property.
+   */
   g_object_class_install_property (gobject_class, ARG_MEDIA_STOP,
       g_param_spec_uint64 ("media_stop", "Media stop",
           "The media stop position",
           0, G_MAXUINT64, GST_CLOCK_TIME_NONE, G_PARAM_READABLE));
 
+  /**
+   * GnlObject:rate
+   *
+   * The rate applied to the controlled output.
+   *
+   * This is a read-only value computed from duration and media_duration.
+   */
   g_object_class_install_property (gobject_class, ARG_RATE,
       g_param_spec_double ("rate", "Rate",
           "Playback rate of the media",
           -G_MAXDOUBLE, G_MAXDOUBLE, 1.0, G_PARAM_READABLE));
 
+  /**
+   * GnlObject:priority
+   *
+   * The priority of the object in the container.
+   *
+   * The highest priority is 0, meaning this object will be selected over
+   * any other between start and stop.
+   *
+   * The lowest priority is G_MAXUINT32.
+   *
+   * Objects whose priority is (-1) will be considered as 'default' objects
+   * in GnlComposition and their start/stop values will be modified as to
+   * fit the whole duration of the composition.
+   */
   g_object_class_install_property (gobject_class, ARG_PRIORITY,
       g_param_spec_uint ("priority", "Priority",
           "The priority of the object (0 = highest priority)", 0, G_MAXUINT, 0,
           G_PARAM_READWRITE));
-  g_object_class_install_property (gobject_class, ARG_ACTIVE,
-      g_param_spec_boolean ("active", "Active", "Render this object", TRUE,
-          G_PARAM_READWRITE));
 
+  /**
+   * GnlObject:active
+   *
+   * Indicates whether this object should be used by its container.
+   *
+   * Set to #TRUE to temporarily disable this object in a #GnlComposition.
+   */
+  g_object_class_install_property (gobject_class, ARG_ACTIVE,
+      g_param_spec_boolean ("active", "Active",
+          "Use this object in the GnlComposition", TRUE, G_PARAM_READWRITE));
+
+  /**
+   * GnlObject:caps
+   *
+   * Caps used to filter/choose the output stream.
+   *
+   * If the controlled object produces several stream, you can set this
+   * property to choose a specific stream.
+   *
+   * If nothing is specified then a source pad will be chosen at random.
+   */
   g_object_class_install_property (gobject_class, ARG_CAPS,
       g_param_spec_boxed ("caps", "Caps",
           "Caps used to filter/choose the output stream",
