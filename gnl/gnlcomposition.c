@@ -615,7 +615,7 @@ priority_comp (GnlObject * a, GnlObject * b)
   return 0;
 }
 
-static gboolean
+static inline gboolean
 have_to_update_pipeline (GnlComposition * comp)
 {
   GST_DEBUG_OBJECT (comp,
@@ -2097,11 +2097,13 @@ update_pipeline (GnlComposition * comp, GstClockTime currenttime,
  */
 
 static void
-object_start_changed (GnlObject * object, GParamSpec * arg G_GNUC_UNUSED,
-    GnlComposition * comp)
+object_start_stop_priority_changed (GnlObject * object,
+    GParamSpec * arg G_GNUC_UNUSED, GnlComposition * comp)
 {
-  GST_DEBUG_OBJECT (object, "start position changed (%" GST_TIME_FORMAT
-      "), evaluating pipeline update", GST_TIME_ARGS (object->start));
+  GST_DEBUG_OBJECT (object, "start/stop/priority  changed (%" GST_TIME_FORMAT
+      "/%" GST_TIME_FORMAT "/%d), evaluating pipeline update",
+      GST_TIME_ARGS (object->start),
+      GST_TIME_ARGS (object->stop), object->priority);
 
   comp->private->objects_start = g_list_sort
       (comp->private->objects_start, (GCompareFunc) objects_start_compare);
@@ -2112,52 +2114,6 @@ object_start_changed (GnlObject * object, GParamSpec * arg G_GNUC_UNUSED,
   if (comp->private->current && (OBJECT_IN_ACTIVE_SEGMENT (comp, object) ||
           g_node_find (comp->private->current,
               G_IN_ORDER, G_TRAVERSE_ALL, object))) {
-    GstClockTime curpos = get_current_position (comp);
-    if (curpos == GST_CLOCK_TIME_NONE)
-      curpos = comp->private->segment->start = comp->private->segment_start;
-    update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
-  } else
-    update_start_stop_duration (comp);
-}
-
-static void
-object_stop_changed (GnlObject * object, GParamSpec * arg G_GNUC_UNUSED,
-    GnlComposition * comp)
-{
-  GST_DEBUG_OBJECT (object, "stop position changed (%" GST_TIME_FORMAT
-      "), evaluating pipeline update", GST_TIME_ARGS (object->stop));
-
-  comp->private->objects_stop = g_list_sort
-      (comp->private->objects_stop, (GCompareFunc) objects_stop_compare);
-
-  comp->private->objects_start = g_list_sort
-      (comp->private->objects_start, (GCompareFunc) objects_start_compare);
-
-  if (comp->private->current && (OBJECT_IN_ACTIVE_SEGMENT (comp, object) ||
-          g_node_find (comp->private->current,
-              G_IN_ORDER, G_TRAVERSE_ALL, object))) {
-    GstClockTime curpos = get_current_position (comp);
-    if (curpos == GST_CLOCK_TIME_NONE)
-      curpos = comp->private->segment->start = comp->private->segment_start;
-    update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
-  } else
-    update_start_stop_duration (comp);
-}
-
-static void
-object_priority_changed (GnlObject * object, GParamSpec * arg G_GNUC_UNUSED,
-    GnlComposition * comp)
-{
-  GST_DEBUG_OBJECT (object, "priority changed (%u), evaluating pipeline update",
-      object->priority);
-
-  comp->private->objects_start = g_list_sort
-      (comp->private->objects_start, (GCompareFunc) objects_start_compare);
-
-  comp->private->objects_stop = g_list_sort
-      (comp->private->objects_stop, (GCompareFunc) objects_stop_compare);
-
-  if (comp->private->current && OBJECT_IN_ACTIVE_SEGMENT (comp, object)) {
     GstClockTime curpos = get_current_position (comp);
     if (curpos == GST_CLOCK_TIME_NONE)
       curpos = comp->private->segment->start = comp->private->segment_start;
@@ -2260,11 +2216,12 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
   if ((((GnlObject *) element)->priority != G_MAXUINT32)) {
     /* Only react on non-default objects properties */
     entry->starthandler = g_signal_connect (G_OBJECT (element),
-        "notify::start", G_CALLBACK (object_start_changed), comp);
+        "notify::start", G_CALLBACK (object_start_stop_priority_changed), comp);
     entry->stophandler = g_signal_connect (G_OBJECT (element),
-        "notify::stop", G_CALLBACK (object_stop_changed), comp);
+        "notify::stop", G_CALLBACK (object_start_stop_priority_changed), comp);
     entry->priorityhandler = g_signal_connect (G_OBJECT (element),
-        "notify::priority", G_CALLBACK (object_priority_changed), comp);
+        "notify::priority", G_CALLBACK (object_start_stop_priority_changed),
+        comp);
   } else {
     /* We set the default source start/stop values to 0 and composition-stop */
     g_object_set (element,
