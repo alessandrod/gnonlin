@@ -49,6 +49,12 @@ GST_STATIC_PAD_TEMPLATE ("src",
 GST_DEBUG_CATEGORY_STATIC (gnlcomposition);
 #define GST_CAT_DEFAULT gnlcomposition
 
+enum
+{
+  ARG_0,
+  ARG_UPDATE,
+};
+
 struct _GnlCompositionPrivate
 {
   gboolean dispose_has_run;
@@ -64,6 +70,14 @@ struct _GnlCompositionPrivate
   GList *objects_stop;
   GHashTable *objects_hash;
   GMutex *objects_lock;
+
+  /* Update properties
+   * can_update: If True, updates should be taken into account immediatly, else
+   *   they should be postponed until it is set to True again. 
+   * update_required: Set to True if an update is required when the
+   *   can_update property just above is set back to True. */
+  gboolean can_update;
+  gboolean update_required;
 
   /*
      thread-safe Seek handling.
@@ -123,6 +137,10 @@ struct _GnlCompositionPrivate
 
 static void gnl_composition_dispose (GObject * object);
 static void gnl_composition_finalize (GObject * object);
+static void gnl_composition_set_property (GObject * object, guint prop_id,
+    const GValue * value, GParamSpec * pspsec);
+static void gnl_composition_get_property (GObject * object, guint prop_id,
+    GValue * value, GParamSpec * pspsec);
 static void gnl_composition_reset (GnlComposition * comp);
 
 static gboolean gnl_composition_add_object (GstBin * bin, GstElement * element);
@@ -140,7 +158,11 @@ static void pad_blocked (GstPad * pad, gboolean blocked, GnlComposition * comp);
 
 static gboolean
 seek_handling (GnlComposition * comp, gboolean initial, gboolean update);
+static gint objects_start_compare (GnlObject * a, GnlObject * b);
+static gint objects_stop_compare (GnlObject * a, GnlObject * b);
+static GstClockTime get_current_position (GnlComposition * comp);
 
+static void gnl_composition_set_update (GnlComposition * comp, gboolean update);
 static gboolean
 update_pipeline (GnlComposition * comp, GstClockTime currenttime,
     gboolean initial, gboolean change_state, gboolean modify);
@@ -229,6 +251,10 @@ gnl_composition_class_init (GnlCompositionClass * klass)
 
   gobject_class->dispose = GST_DEBUG_FUNCPTR (gnl_composition_dispose);
   gobject_class->finalize = GST_DEBUG_FUNCPTR (gnl_composition_finalize);
+  gobject_class->set_property =
+      GST_DEBUG_FUNCPTR (gnl_composition_set_property);
+  gobject_class->get_property =
+      GST_DEBUG_FUNCPTR (gnl_composition_get_property);
 
   gstelement_class->change_state = gnl_composition_change_state;
 
@@ -240,6 +266,10 @@ gnl_composition_class_init (GnlCompositionClass * klass)
 
   gst_element_class_add_pad_template (gstelement_class,
       gst_static_pad_template_get (&gnl_composition_src_template));
+
+  g_object_class_install_property (gobject_class, ARG_UPDATE,
+      g_param_spec_boolean ("update", "Update", "Update immediatly any changes",
+          TRUE, G_PARAM_READWRITE));
 }
 
 static void
@@ -271,6 +301,9 @@ gnl_composition_init (GnlComposition * comp,
   comp->private->objects_start = NULL;
   comp->private->objects_stop = NULL;
 
+  comp->private->can_update = TRUE;
+  comp->private->update_required = FALSE;
+
   comp->private->flushing_lock = g_mutex_new ();
   comp->private->flushing = FALSE;
   comp->private->pending_idle = 0;
@@ -285,7 +318,6 @@ gnl_composition_init (GnlComposition * comp,
       (g_direct_hash,
       g_direct_equal, NULL, (GDestroyNotify) hash_value_destroy);
 
-
   gnl_composition_reset (comp);
 }
 
@@ -298,6 +330,9 @@ gnl_composition_dispose (GObject * object)
     return;
 
   comp->private->dispose_has_run = TRUE;
+
+  comp->private->can_update = TRUE;
+  comp->private->update_required = FALSE;
 
   if (comp->private->ghostpad) {
     gnl_object_remove_ghost_pad ((GnlObject *) object, comp->private->ghostpad);
@@ -342,6 +377,38 @@ gnl_composition_finalize (GObject * object)
   g_free (comp->private);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
+}
+
+static void
+gnl_composition_set_property (GObject * object, guint prop_id,
+    const GValue * value, GParamSpec * pspec)
+{
+  GnlComposition *comp = (GnlComposition *) object;
+
+  switch (prop_id) {
+    case ARG_UPDATE:
+      gnl_composition_set_update (comp, g_value_get_boolean (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+gnl_composition_get_property (GObject * object, guint prop_id,
+    GValue * value, GParamSpec * pspec)
+{
+  GnlComposition *comp = (GnlComposition *) object;
+
+  switch (prop_id) {
+    case ARG_UPDATE:
+      g_value_set_boolean (value, comp->private->can_update);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
 }
 
 /* signal_duration_change
@@ -465,6 +532,8 @@ gnl_composition_reset (GnlComposition * comp)
   comp->private->pending_idle = 0;
   comp->private->flushing = FALSE;
   COMP_FLUSHING_UNLOCK (comp);
+
+  comp->private->update_required = FALSE;
 
   GST_DEBUG_OBJECT (comp, "Composition now resetted");
 }
@@ -631,6 +700,44 @@ have_to_update_pipeline (GnlComposition * comp)
   if (comp->private->segment->start >= comp->private->segment_stop)
     return TRUE;
   return FALSE;
+}
+
+static void
+gnl_composition_set_update (GnlComposition * comp, gboolean update)
+{
+  if (G_UNLIKELY (update == comp->private->can_update))
+    return;
+
+  GST_DEBUG_OBJECT (comp, "update:%d [currently %d], update_required:%d",
+      update, comp->private->can_update, comp->private->update_required);
+
+  COMP_OBJECTS_LOCK (comp);
+  comp->private->can_update = update;
+
+  if (update && comp->private->update_required) {
+    GstClockTime curpos;
+
+    /* Make sure the lists are updated */
+    comp->private->objects_start = g_list_sort
+        (comp->private->objects_start, (GCompareFunc) objects_start_compare);
+
+    comp->private->objects_stop = g_list_sort
+        (comp->private->objects_stop, (GCompareFunc) objects_stop_compare);
+
+    /* Get current position */
+    if ((curpos = get_current_position (comp)) == GST_CLOCK_TIME_NONE) {
+      if (GST_CLOCK_TIME_IS_VALID (comp->private->segment_start))
+        curpos = comp->private->segment->start = comp->private->segment_start;
+      else
+        curpos = 0;
+    }
+
+    COMP_OBJECTS_UNLOCK (comp);
+
+    /* update pipeline to that position */
+    update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
+  } else
+    COMP_OBJECTS_UNLOCK (comp);
 }
 
 /*
@@ -1307,6 +1414,7 @@ gnl_composition_change_state (GstElement * element, GstStateChange transition)
     case GST_STATE_CHANGE_READY_TO_PAUSED:{
       GstIterator *childs;
 
+      gnl_composition_reset (comp);
       /* state-lock all elements */
       GST_DEBUG_OBJECT (comp,
           "Setting all childs to READY and locking their state");
@@ -1413,6 +1521,8 @@ update_start_stop_duration (GnlComposition * comp)
 
   /* If we have a default object, the start position is 0 */
   if (comp->private->defaultobject) {
+    GST_LOG_OBJECT (cobj,
+        "Setting start to 0 because we have a default object");
     if (cobj->start != 0) {
       cobj->start = 0;
       g_object_notify (G_OBJECT (cobj), "start");
@@ -1927,6 +2037,8 @@ update_pipeline (GnlComposition * comp, GstClockTime currenttime,
 {
   gboolean ret = TRUE;
 
+  g_return_val_if_fail (comp->private->can_update, FALSE);
+
   GST_DEBUG_OBJECT (comp,
       "currenttime:%" GST_TIME_FORMAT
       " initial:%d , change_state:%d , modify:%d", GST_TIME_ARGS (currenttime),
@@ -1936,7 +2048,7 @@ update_pipeline (GnlComposition * comp, GstClockTime currenttime,
 
   update_start_stop_duration (comp);
 
-  if ((GST_CLOCK_TIME_IS_VALID (currenttime))) {
+  if (GST_CLOCK_TIME_IS_VALID (currenttime)) {
     GstState state = GST_STATE (comp);
     GstState nextstate =
         (GST_STATE_NEXT (comp) ==
@@ -2105,15 +2217,23 @@ object_start_stop_priority_changed (GnlObject * object,
       GST_TIME_ARGS (object->start),
       GST_TIME_ARGS (object->stop), object->priority);
 
+  if (!comp->private->can_update) {
+    comp->private->update_required = TRUE;
+    return;
+  }
+
+  /* The topology of the ocmposition might have changed, update the lists */
   comp->private->objects_start = g_list_sort
       (comp->private->objects_start, (GCompareFunc) objects_start_compare);
 
   comp->private->objects_stop = g_list_sort
       (comp->private->objects_stop, (GCompareFunc) objects_stop_compare);
 
-  if (comp->private->current && (OBJECT_IN_ACTIVE_SEGMENT (comp, object) ||
-          g_node_find (comp->private->current,
-              G_IN_ORDER, G_TRAVERSE_ALL, object))) {
+  /* Update pipeline if needed */
+  if (comp->private->current &&
+      (OBJECT_IN_ACTIVE_SEGMENT (comp, object) ||
+          g_node_find (comp->private->current, G_IN_ORDER, G_TRAVERSE_ALL,
+              object))) {
     GstClockTime curpos = get_current_position (comp);
     if (curpos == GST_CLOCK_TIME_NONE)
       curpos = comp->private->segment->start = comp->private->segment_start;
@@ -2128,6 +2248,11 @@ object_active_changed (GnlObject * object, GParamSpec * arg G_GNUC_UNUSED,
 {
   GST_DEBUG_OBJECT (object,
       "active flag changed (%d), evaluating pipeline update", object->active);
+
+  if (!comp->private->can_update) {
+    comp->private->update_required = TRUE;
+    return;
+  }
 
   if (comp->private->current && OBJECT_IN_ACTIVE_SEGMENT (comp, object)) {
     GstClockTime curpos = get_current_position (comp);
@@ -2177,7 +2302,8 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
   gboolean ret;
   GnlCompositionEntry *entry;
   GnlComposition *comp = (GnlComposition *) bin;
-  GstClockTime curpos;
+  gboolean update_required;
+  GstClockTime curpos = GST_CLOCK_TIME_NONE;
 
   GST_DEBUG_OBJECT (bin, "element %s", GST_OBJECT_NAME (element));
 
@@ -2283,17 +2409,25 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
       GST_TIME_ARGS (comp->private->segment_start),
       GST_TIME_ARGS (comp->private->segment_stop));
 
-  if ((curpos = get_current_position (comp)) == GST_CLOCK_TIME_NONE)
-    curpos = comp->private->segment_start;
+  update_required = OBJECT_IN_ACTIVE_SEGMENT (comp, element)
+      || (!comp->private->current);
+
+  /* We only need the current position if we're going to update */
+  if (update_required && comp->private->can_update)
+    if ((curpos = get_current_position (comp)) == GST_CLOCK_TIME_NONE)
+      curpos = comp->private->segment_start;
 
   COMP_OBJECTS_UNLOCK (comp);
 
   /* If we added within currently configured segment OR the pipeline was *
    * previously empty, THEN update pipeline */
-  if (OBJECT_IN_ACTIVE_SEGMENT (comp, element) || (!comp->private->current))
-    update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
-  else
-    update_start_stop_duration (comp);
+  if (comp->private->can_update) {
+    if (update_required)
+      update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
+    else
+      update_start_stop_duration (comp);
+  } else
+    comp->private->update_required |= update_required;
 
 beach:
   gst_object_unref (element);
@@ -2309,9 +2443,10 @@ chiringuito:
 static gboolean
 gnl_composition_remove_object (GstBin * bin, GstElement * element)
 {
-  gboolean ret = GST_STATE_CHANGE_FAILURE;
   GnlComposition *comp = (GnlComposition *) bin;
-  GstClockTime curpos;
+  GstClockTime curpos = GST_CLOCK_TIME_NONE;
+  gboolean ret = GST_STATE_CHANGE_FAILURE;
+  gboolean update_required;
 
   GST_DEBUG_OBJECT (bin, "element %s", GST_OBJECT_NAME (element));
   /* we only accept GnlObject */
@@ -2344,18 +2479,26 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
   if (!(g_hash_table_remove (comp->private->objects_hash, element)))
     goto chiringuito;
 
-  if ((curpos = get_current_position (comp)) == GST_CLOCK_TIME_NONE)
-    curpos = comp->private->segment_start;
+  update_required = OBJECT_IN_ACTIVE_SEGMENT (comp, element) ||
+      ((GnlObject *) element)->priority == G_MAXUINT32;
+
+  if (update_required && comp->private->can_update) {
+    curpos = get_current_position (comp);
+    if (G_UNLIKELY (curpos == GST_CLOCK_TIME_NONE))
+      curpos = comp->private->segment_start;
+  }
 
   COMP_OBJECTS_UNLOCK (comp);
 
   /* If we removed within currently configured segment, or it was the default source, *
    * update pipeline */
-  if (OBJECT_IN_ACTIVE_SEGMENT (comp, element)
-      || (((GnlObject *) element)->priority == G_MAXUINT32))
-    update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
-  else
-    update_start_stop_duration (comp);
+  if (comp->private->can_update) {
+    if (update_required) {
+      update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
+    } else
+      update_start_stop_duration (comp);
+  } else
+    comp->private->update_required |= update_required;
 
   ret = GST_BIN_CLASS (parent_class)->remove_element (bin, element);
 

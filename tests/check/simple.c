@@ -1,7 +1,12 @@
 #include "common.h"
 
 
-GST_START_TEST (test_time_duration)
+/* macros for 'update' property enabling */
+#define DISABLE_ASYNC_UPDATE { if (async) g_object_set(comp, "update", FALSE, NULL); }
+#define ENABLE_ASYNC_UPDATE { if (async) g_object_set(comp, "update", TRUE, NULL); }
+
+static void
+test_time_duration_full (gboolean async)
 {
   guint64 start, stop;
   gint64 duration;
@@ -35,14 +40,22 @@ GST_START_TEST (test_time_duration)
   ASSERT_OBJECT_REFCOUNT (source1, "source1", 1);
   ASSERT_OBJECT_REFCOUNT (source2, "source2", 1);
 
+  DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source1);
+  if (async)
+    check_start_stop_duration (comp, 0, 0, 0);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 1 * GST_SECOND, 1 * GST_SECOND);
 
   ASSERT_OBJECT_REFCOUNT (source1, "source1", 1);
 
   /* Second source */
 
+  DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source2);
+  if (async)
+    check_start_stop_duration (comp, 0, 1 * GST_SECOND, 1 * GST_SECOND);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
 
   ASSERT_OBJECT_REFCOUNT (source2, "source2", 1);
@@ -50,7 +63,11 @@ GST_START_TEST (test_time_duration)
   /* Remove first source */
 
   gst_object_ref (source1);
+  DISABLE_ASYNC_UPDATE;
   gst_bin_remove (GST_BIN (comp), source1);
+  if (async)
+    check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 1 * GST_SECOND, 2 * GST_SECOND,
       1 * GST_SECOND);
 
@@ -58,7 +75,12 @@ GST_START_TEST (test_time_duration)
 
   /* Re-add first source */
 
+  DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source1);
+  if (async)
+    check_start_stop_duration (comp, 1 * GST_SECOND, 2 * GST_SECOND,
+        1 * GST_SECOND);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
   gst_object_unref (source1);
 
@@ -67,9 +89,8 @@ GST_START_TEST (test_time_duration)
   gst_object_unref (comp);
 }
 
-GST_END_TEST;
-
-GST_START_TEST (test_one_after_other)
+static void
+test_one_after_other_full (gboolean async)
 {
   GstElement *pipeline;
   GstElement *comp, *sink, *source1, *source2;
@@ -116,14 +137,18 @@ GST_START_TEST (test_one_after_other)
 
   /* Add one source */
 
+  DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source1);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 1 * GST_SECOND, 1 * GST_SECOND);
 
   ASSERT_OBJECT_REFCOUNT (source1, "source1", 1);
 
   /* Second source */
 
+  DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source2);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
 
   ASSERT_OBJECT_REFCOUNT (source2, "source2", 1);
@@ -131,7 +156,9 @@ GST_START_TEST (test_one_after_other)
   /* Remove first source */
 
   gst_object_ref (source1);
+  DISABLE_ASYNC_UPDATE;
   gst_bin_remove (GST_BIN (comp), source1);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 1 * GST_SECOND, 2 * GST_SECOND,
       1 * GST_SECOND);
 
@@ -139,7 +166,9 @@ GST_START_TEST (test_one_after_other)
 
   /* Re-add first source */
 
+  DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source1);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
   gst_object_unref (source1);
 
@@ -230,7 +259,7 @@ GST_START_TEST (test_one_after_other)
 
   carry_on = TRUE;
 
-  GST_DEBUG ("Let's poll the bus");
+  GST_DEBUG ("Let's poll the bus AGAIN");
 
   while (carry_on) {
     message = gst_bus_poll (bus, GST_MESSAGE_ANY, GST_SECOND / 2);
@@ -273,9 +302,8 @@ GST_START_TEST (test_one_after_other)
   g_free (collect);
 }
 
-GST_END_TEST;
-
-GST_START_TEST (test_one_under_another)
+static void
+test_one_under_another_full (gboolean async)
 {
   GstElement *pipeline;
   GstElement *comp, *sink, *source1, *source2;
@@ -295,7 +323,7 @@ GST_START_TEST (test_one_under_another)
   /*
      Source 1
      Start : 0s
-     Duration : 4s
+     Duration : 2s
      Priority : 1
    */
   source1 = videotest_gnl_src ("source1", 0, 2 * GST_SECOND, 1, 1);
@@ -304,8 +332,8 @@ GST_START_TEST (test_one_under_another)
 
   /*
      Source 2
-     Start : 2s
-     Duration : 4s
+     Start : 1s
+     Duration : 2s
      Priority : 2
    */
   source2 = videotest_gnl_src ("source2", 1 * GST_SECOND, 2 * GST_SECOND, 2, 2);
@@ -313,26 +341,28 @@ GST_START_TEST (test_one_under_another)
   check_start_stop_duration (source2, 1 * GST_SECOND, 3 * GST_SECOND,
       2 * GST_SECOND);
 
-  /* Add one source */
+  /* Add two sources */
 
+  DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source1);
-  check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
-
-  /* Second source */
-
   gst_bin_add (GST_BIN (comp), source2);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 3 * GST_SECOND, 3 * GST_SECOND);
 
   /* Remove second source */
 
   gst_object_ref (source1);
+  DISABLE_ASYNC_UPDATE;
   gst_bin_remove (GST_BIN (comp), source1);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 1 * GST_SECOND, 3 * GST_SECOND,
       2 * GST_SECOND);
 
   /* Re-add second source */
 
+  DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source1);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 3 * GST_SECOND, 3 * GST_SECOND);
   gst_object_unref (source1);
 
@@ -404,9 +434,8 @@ GST_START_TEST (test_one_under_another)
   g_free (collect);
 }
 
-GST_END_TEST;
-
-GST_START_TEST (test_one_bin_after_other)
+static void
+test_one_bin_after_other_full (gboolean async)
 {
   GstElement *pipeline;
   GstElement *comp, *sink, *source1, *source2;
@@ -452,14 +481,20 @@ GST_START_TEST (test_one_bin_after_other)
 
   /* Add one source */
 
+  DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source1);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 1 * GST_SECOND, 1 * GST_SECOND);
 
   ASSERT_OBJECT_REFCOUNT (source1, "source1", 1);
 
   /* Second source */
 
+  DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source2);
+  if (async)
+    check_start_stop_duration (comp, 0, 1 * GST_SECOND, 1 * GST_SECOND);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
 
   ASSERT_OBJECT_REFCOUNT (source2, "source2", 1);
@@ -467,7 +502,9 @@ GST_START_TEST (test_one_bin_after_other)
   /* Remove first source */
 
   gst_object_ref (source1);
+  DISABLE_ASYNC_UPDATE;
   gst_bin_remove (GST_BIN (comp), source1);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 1 * GST_SECOND, 2 * GST_SECOND,
       1 * GST_SECOND);
 
@@ -475,7 +512,12 @@ GST_START_TEST (test_one_bin_after_other)
 
   /* Re-add first source */
 
+  DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source1);
+  if (async)
+    check_start_stop_duration (comp, 1 * GST_SECOND, 2 * GST_SECOND,
+        1 * GST_SECOND);
+  ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
   gst_object_unref (source1);
 
@@ -601,7 +643,64 @@ GST_START_TEST (test_one_bin_after_other)
   g_free (collect);
 }
 
+
+GST_START_TEST (test_time_duration)
+{
+  test_time_duration_full (FALSE);
+}
+
 GST_END_TEST;
+
+GST_START_TEST (test_time_duration_async)
+{
+  test_time_duration_full (TRUE);
+}
+
+GST_END_TEST;
+
+GST_START_TEST (test_one_after_other)
+{
+  test_one_after_other_full (FALSE);
+}
+
+GST_END_TEST;
+
+GST_START_TEST (test_one_after_other_async)
+{
+  test_one_after_other_full (TRUE);
+}
+
+GST_END_TEST;
+
+GST_START_TEST (test_one_under_another)
+{
+  test_one_under_another_full (FALSE);
+}
+
+GST_END_TEST;
+
+GST_START_TEST (test_one_under_another_async)
+{
+  test_one_under_another_full (TRUE);
+}
+
+GST_END_TEST;
+
+GST_START_TEST (test_one_bin_after_other)
+{
+  test_one_bin_after_other_full (FALSE);
+}
+
+GST_END_TEST;
+
+GST_START_TEST (test_one_bin_after_other_async)
+{
+  test_one_bin_after_other_full (TRUE);
+}
+
+GST_END_TEST;
+
+
 
 Suite *
 gnonlin_suite (void)
@@ -612,9 +711,13 @@ gnonlin_suite (void)
   suite_add_tcase (s, tc_chain);
 
   tcase_add_test (tc_chain, test_time_duration);
+  tcase_add_test (tc_chain, test_time_duration_async);
   tcase_add_test (tc_chain, test_one_after_other);
+  tcase_add_test (tc_chain, test_one_after_other_async);
   tcase_add_test (tc_chain, test_one_under_another);
+  tcase_add_test (tc_chain, test_one_under_another_async);
   tcase_add_test (tc_chain, test_one_bin_after_other);
+  tcase_add_test (tc_chain, test_one_bin_after_other_full);
   return s;
 }
 
