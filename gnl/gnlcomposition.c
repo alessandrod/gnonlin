@@ -267,6 +267,21 @@ gnl_composition_class_init (GnlCompositionClass * klass)
   gst_element_class_add_pad_template (gstelement_class,
       gst_static_pad_template_get (&gnl_composition_src_template));
 
+  /**
+   * GnlComposition:update:
+   *
+   * If %TRUE, then all modifications to objects within the composition will
+   * cause a internal pipeline update (if required).
+   * If %FALSE, then only the composition's start/duration/stop properties
+   * will be updated, and the internal pipeline will only be updated when the
+   * property is set back to %TRUE.
+   *
+   * It is recommended to temporarily set this property to %FALSE before doing
+   * more than one modification in the composition (like adding/moving/removing
+   * several objects at once) in order to speed up the process, and then setting
+   * back the property to %TRUE when done.
+   */
+
   g_object_class_install_property (gobject_class, ARG_UPDATE,
       g_param_spec_boolean ("update", "Update",
           "Update the internal pipeline on every modification", TRUE,
