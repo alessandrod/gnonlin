@@ -1906,7 +1906,7 @@ compare_deactivate_single_node (GnlComposition * comp, GNode * node,
 
     GST_LOG_OBJECT (comp, "adding %s to deactivate list",
         GST_ELEMENT_NAME (oldobj));
-    deactivate = g_list_append (deactivate, oldobj);
+    deactivate = g_list_prepend (deactivate, oldobj);
   }
   /* only unblock if it's not the ROOT */
 
@@ -2368,10 +2368,9 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
   }
 
   /* add it sorted to the objects list */
-  comp->private->objects_start = g_list_append
-      (comp->private->objects_start, element);
-  comp->private->objects_start = g_list_sort
-      (comp->private->objects_start, (GCompareFunc) objects_start_compare);
+  comp->private->objects_start = g_list_insert_sorted
+      (comp->private->objects_start, element,
+      (GCompareFunc) objects_start_compare);
 
   if (comp->private->objects_start)
     GST_LOG_OBJECT (comp,
@@ -2383,10 +2382,9 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
         GST_TIME_ARGS (((GnlObject *)
                 comp->private->objects_start->data)->stop));
 
-  comp->private->objects_stop = g_list_append
-      (comp->private->objects_stop, element);
-  comp->private->objects_stop = g_list_sort
-      (comp->private->objects_stop, (GCompareFunc) objects_stop_compare);
+  comp->private->objects_stop = g_list_insert_sorted
+      (comp->private->objects_stop, element,
+      (GCompareFunc) objects_stop_compare);
 
   if (comp->private->objects_stop)
     GST_LOG_OBJECT (comp,
@@ -2459,13 +2457,9 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
     /* remove it from the objects list and resort the lists */
     comp->private->objects_start = g_list_remove
         (comp->private->objects_start, element);
-    comp->private->objects_start = g_list_sort
-        (comp->private->objects_start, (GCompareFunc) objects_start_compare);
 
     comp->private->objects_stop = g_list_remove
         (comp->private->objects_stop, element);
-    comp->private->objects_stop = g_list_sort
-        (comp->private->objects_stop, (GCompareFunc) objects_stop_compare);
 
     GST_LOG_OBJECT (element, "Removed from the objects start/stop list");
   }
