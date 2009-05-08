@@ -717,13 +717,6 @@ gnl_composition_set_update (GnlComposition * comp, gboolean update)
   if (update && comp->private->update_required) {
     GstClockTime curpos;
 
-    /* Make sure the lists are updated */
-    comp->private->objects_start = g_list_sort
-        (comp->private->objects_start, (GCompareFunc) objects_start_compare);
-
-    comp->private->objects_stop = g_list_sort
-        (comp->private->objects_stop, (GCompareFunc) objects_stop_compare);
-
     /* Get current position */
     if ((curpos = get_current_position (comp)) == GST_CLOCK_TIME_NONE) {
       if (GST_CLOCK_TIME_IS_VALID (comp->private->segment_start))
@@ -2217,17 +2210,18 @@ object_start_stop_priority_changed (GnlObject * object,
       GST_TIME_ARGS (object->start),
       GST_TIME_ARGS (object->stop), object->priority);
 
-  if (!comp->private->can_update) {
-    comp->private->update_required = TRUE;
-    return;
-  }
-
   /* The topology of the ocmposition might have changed, update the lists */
   comp->private->objects_start = g_list_sort
       (comp->private->objects_start, (GCompareFunc) objects_start_compare);
 
   comp->private->objects_stop = g_list_sort
       (comp->private->objects_stop, (GCompareFunc) objects_stop_compare);
+
+  if (!comp->private->can_update) {
+    comp->private->update_required = TRUE;
+    update_start_stop_duration (comp);
+    return;
+  }
 
   /* Update pipeline if needed */
   if (comp->private->current &&
@@ -2421,13 +2415,13 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
 
   /* If we added within currently configured segment OR the pipeline was *
    * previously empty, THEN update pipeline */
-  if (comp->private->can_update) {
-    if (update_required)
-      update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
-    else
-      update_start_stop_duration (comp);
-  } else
-    comp->private->update_required |= update_required;
+  if (G_LIKELY (update_required && comp->private->can_update))
+    update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
+  else {
+    if (!comp->private->can_update)
+      comp->private->update_required |= update_required;
+    update_start_stop_duration (comp);
+  }
 
 beach:
   gst_object_unref (element);
@@ -2492,13 +2486,13 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
 
   /* If we removed within currently configured segment, or it was the default source, *
    * update pipeline */
-  if (comp->private->can_update) {
-    if (update_required) {
-      update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
-    } else
-      update_start_stop_duration (comp);
-  } else
-    comp->private->update_required |= update_required;
+  if (G_LIKELY (comp->private->can_update && update_required))
+    update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
+  else {
+    if (!comp->private->can_update)
+      comp->private->update_required |= update_required;
+    update_start_stop_duration (comp);
+  }
 
   ret = GST_BIN_CLASS (parent_class)->remove_element (bin, element);
 

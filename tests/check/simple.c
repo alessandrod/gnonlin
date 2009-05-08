@@ -42,8 +42,6 @@ test_time_duration_full (gboolean async)
 
   DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source1);
-  if (async)
-    check_start_stop_duration (comp, 0, 0, 0);
   ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 1 * GST_SECOND, 1 * GST_SECOND);
 
@@ -53,8 +51,6 @@ test_time_duration_full (gboolean async)
 
   DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source2);
-  if (async)
-    check_start_stop_duration (comp, 0, 1 * GST_SECOND, 1 * GST_SECOND);
   ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
 
@@ -65,8 +61,6 @@ test_time_duration_full (gboolean async)
   gst_object_ref (source1);
   DISABLE_ASYNC_UPDATE;
   gst_bin_remove (GST_BIN (comp), source1);
-  if (async)
-    check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
   ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 1 * GST_SECOND, 2 * GST_SECOND,
       1 * GST_SECOND);
@@ -77,9 +71,6 @@ test_time_duration_full (gboolean async)
 
   DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source1);
-  if (async)
-    check_start_stop_duration (comp, 1 * GST_SECOND, 2 * GST_SECOND,
-        1 * GST_SECOND);
   ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
   gst_object_unref (source1);
@@ -492,8 +483,6 @@ test_one_bin_after_other_full (gboolean async)
 
   DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source2);
-  if (async)
-    check_start_stop_duration (comp, 0, 1 * GST_SECOND, 1 * GST_SECOND);
   ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
 
@@ -514,9 +503,6 @@ test_one_bin_after_other_full (gboolean async)
 
   DISABLE_ASYNC_UPDATE;
   gst_bin_add (GST_BIN (comp), source1);
-  if (async)
-    check_start_stop_duration (comp, 1 * GST_SECOND, 2 * GST_SECOND,
-        1 * GST_SECOND);
   ENABLE_ASYNC_UPDATE;
   check_start_stop_duration (comp, 0, 2 * GST_SECOND, 2 * GST_SECOND);
   gst_object_unref (source1);
