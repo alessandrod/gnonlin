@@ -268,8 +268,9 @@ gnl_composition_class_init (GnlCompositionClass * klass)
       gst_static_pad_template_get (&gnl_composition_src_template));
 
   g_object_class_install_property (gobject_class, ARG_UPDATE,
-      g_param_spec_boolean ("update", "Update", "Update immediatly any changes",
-          TRUE, G_PARAM_READWRITE));
+      g_param_spec_boolean ("update", "Update",
+          "Update the internal pipeline on every modification", TRUE,
+          G_PARAM_READWRITE));
 }
 
 static void
