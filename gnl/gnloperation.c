@@ -210,21 +210,37 @@ element_is_valid_filter (GstElement * element, gboolean * isdynamic)
   }
   gst_iterator_free (pads);
 
-  factory = gst_element_get_factory (element);
+  if (G_LIKELY ((factory = gst_element_get_factory (element)))) {
 
-  for (templates = gst_element_factory_get_static_pad_templates (factory);
-      templates; templates = g_list_next (templates)) {
-    GstStaticPadTemplate *template = (GstStaticPadTemplate *) templates->data;
+    for (templates = gst_element_factory_get_static_pad_templates (factory);
+        templates; templates = g_list_next (templates)) {
+      GstStaticPadTemplate *template = (GstStaticPadTemplate *) templates->data;
 
-    if (template->direction == GST_PAD_SRC)
-      havesrc = TRUE;
-    else if (template->direction == GST_PAD_SINK) {
-      if (!havesink && (template->presence == GST_PAD_REQUEST) && isdynamic)
-        *isdynamic = TRUE;
-      havesink = TRUE;
+      if (template->direction == GST_PAD_SRC)
+        havesrc = TRUE;
+      else if (template->direction == GST_PAD_SINK) {
+        if (!havesink && (template->presence == GST_PAD_REQUEST) && isdynamic)
+          *isdynamic = TRUE;
+        havesink = TRUE;
+      }
+    }
+  } else if (GST_ELEMENT_GET_CLASS (element)) {
+    GList *tmp =
+        gst_element_class_get_pad_template_list (GST_ELEMENT_GET_CLASS
+        (element));
+    while (tmp) {
+      GstPadTemplate *template = (GstPadTemplate *) tmp->data;
+
+      if (template->direction == GST_PAD_SRC)
+        havesrc = TRUE;
+      else if (template->direction == GST_PAD_SINK) {
+        if (!havesink && (template->presence == GST_PAD_REQUEST) && isdynamic)
+          *isdynamic = TRUE;
+        havesink = TRUE;
+      }
+      tmp = g_list_next (tmp);
     }
   }
-
   return (havesink && havesrc);
 }
 
