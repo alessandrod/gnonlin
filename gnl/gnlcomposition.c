@@ -2046,14 +2046,17 @@ update_pipeline (GnlComposition * comp, GstClockTime currenttime,
 {
   gboolean ret = TRUE;
 
-  g_return_val_if_fail (comp->private->can_update, FALSE);
-
   GST_DEBUG_OBJECT (comp,
       "currenttime:%" GST_TIME_FORMAT
       " initial:%d , change_state:%d , modify:%d", GST_TIME_ARGS (currenttime),
       initial, change_state, modify);
 
   COMP_OBJECTS_LOCK (comp);
+
+  if (G_UNLIKELY (!comp->private->can_update)) {
+    COMP_OBJECTS_UNLOCK (comp);
+    return TRUE;
+  }
 
   update_start_stop_duration (comp);
 
