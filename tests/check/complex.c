@@ -929,19 +929,14 @@ gnonlin_suite (void)
 {
   Suite *s = suite_create ("gnonlin");
   TCase *tc_chain = tcase_create ("complex");
-  guint major, minor, micro, nano;
 
   suite_add_tcase (s, tc_chain);
 
-  /* Only add the following test for core > 0.10.4 */
-  gst_version (&major, &minor, &micro, &nano);
-  if ((micro > 4) || (micro == 4 && nano > 0)) {
-    tcase_add_test (tc_chain, test_one_space_another);
-    tcase_add_test (tc_chain, test_one_default_another);
-    tcase_add_test (tc_chain, test_renegotiation);
-    tcase_add_test (tc_chain, test_one_bin_space_another);
-    tcase_add_test (tc_chain, test_one_above_another);
-  }
+  tcase_add_test (tc_chain, test_one_space_another);
+  tcase_add_test (tc_chain, test_one_default_another);
+  tcase_add_test (tc_chain, test_renegotiation);
+  tcase_add_test (tc_chain, test_one_bin_space_another);
+  tcase_add_test (tc_chain, test_one_above_another);
   return s;
 }
 
