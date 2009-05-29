@@ -46,6 +46,7 @@ G_BEGIN_DECLS
  * GnlObjectFlags:
  * @GNL_OBJECT_IS_SOURCE:
  * @GNL_OBJECT_IS_OPERATION:
+ * @GNL_OBJECT_IS_EXPANDABLE: The #GnlObject start/stop will extend accross the full composition.
  * @GNL_OBJECT_LAST_FLAG:
 */
 
@@ -53,6 +54,7 @@ typedef enum
 {
   GNL_OBJECT_SOURCE = (GST_BIN_FLAG_LAST << 0),
   GNL_OBJECT_OPERATION = (GST_BIN_FLAG_LAST << 1),
+  GNL_OBJECT_EXPANDABLE = (GST_BIN_FLAG_LAST << 2),
   /* padding */
   GNL_OBJECT_LAST_FLAG = (GST_BIN_FLAG_LAST << 16)
 } GnlObjectFlags;
@@ -62,6 +64,8 @@ typedef enum
   (GST_OBJECT_FLAG_IS_SET(obj, GNL_OBJECT_SOURCE))
 #define GNL_OBJECT_IS_OPERATION(obj) \
   (GST_OBJECT_FLAG_IS_SET(obj, GNL_OBJECT_OPERATION))
+#define GNL_OBJECT_IS_EXPANDABLE(obj) \
+  (GST_OBJECT_FLAG_IS_SET(obj, GNL_OBJECT_EXPANDABLE))
 
 struct _GnlObject
 {
