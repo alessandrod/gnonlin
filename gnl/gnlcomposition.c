@@ -96,7 +96,8 @@ struct _GnlCompositionPrivate
   /* current stack, list of GnlObject* */
   GNode *current;
 
-  GnlObject *defaultobject;
+  /* List of GnlObject whose start/duration will be the same as the composition */
+  GList *expandables;
 
   /* TRUE if the stack is valid.
    * This is meant to prevent the top-level pad to be unblocked before the stack
@@ -328,8 +329,6 @@ gnl_composition_init (GnlComposition * comp,
 
   comp->private->waitingpads = 0;
 
-  comp->private->defaultobject = NULL;
-
   comp->private->objects_hash = g_hash_table_new_full
       (g_direct_hash,
       g_direct_equal, NULL, (GDestroyNotify) hash_value_destroy);
@@ -364,6 +363,11 @@ gnl_composition_dispose (GObject * object)
   if (comp->private->current) {
     g_node_destroy (comp->private->current);
     comp->private->current = NULL;
+  }
+
+  if (comp->private->expandables) {
+    g_list_free (comp->private->expandables);
+    comp->private->expandables = NULL;
   }
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
@@ -917,7 +921,7 @@ handle_seek_event (GnlComposition * comp, GstEvent * event)
 
   /* crop the segment start/stop values */
   /* Only crop segment start value if we don't have a default object */
-  if (comp->private->defaultobject == NULL)
+  if (comp->private->expandables == NULL)
     comp->private->segment->start = MAX (comp->private->segment->start,
         ((GnlObject *) comp)->start);
   comp->private->segment->stop = MIN (comp->private->segment->stop,
@@ -1262,9 +1266,14 @@ get_stack_list (GnlComposition * comp, GstClockTime timestamp,
     }
   }
 
-  /* append the default source if we have one */
-  if ((timestamp < ((GnlObject *) comp)->stop) && comp->private->defaultobject)
-    stack = g_list_append (stack, comp->private->defaultobject);
+  /* Insert the expandables */
+  if (G_LIKELY (timestamp < ((GnlObject *) comp)->stop))
+    for (tmp = comp->private->expandables; tmp; tmp = g_list_next (tmp)) {
+      GST_DEBUG_OBJECT (comp, "Adding expandable %s sorted to the list",
+          GST_OBJECT_NAME (tmp->data));
+      stack = g_list_insert_sorted (stack, tmp->data,
+          (GCompareFunc) priority_comp);
+    }
 
   /* convert that list to a stack */
   tmp = stack;
@@ -1529,7 +1538,7 @@ update_start_stop_duration (GnlComposition * comp)
   }
 
   /* If we have a default object, the start position is 0 */
-  if (comp->private->defaultobject) {
+  if (comp->private->expandables) {
     GST_LOG_OBJECT (cobj,
         "Setting start to 0 because we have a default object");
     if (cobj->start != 0) {
@@ -1551,10 +1560,13 @@ update_start_stop_duration (GnlComposition * comp)
   if (obj->stop != cobj->stop) {
     GST_LOG_OBJECT (obj, "setting stop from %s to %" GST_TIME_FORMAT,
         GST_OBJECT_NAME (obj), GST_TIME_ARGS (obj->stop));
-    if (comp->private->defaultobject) {
-      g_object_set (comp->private->defaultobject, "duration", obj->stop, NULL);
-      g_object_set (comp->private->defaultobject, "media-duration", obj->stop,
-          NULL);
+    if (comp->private->expandables) {
+      GList *tmp = comp->private->expandables;
+      while (tmp) {
+        g_object_set (tmp->data, "duration", obj->stop, NULL);
+        g_object_set (tmp->data, "media-duration", obj->stop, NULL);
+        tmp = g_list_next (tmp);
+      }
     }
     comp->private->segment->stop = obj->stop;
     cobj->stop = obj->stop;
@@ -1730,7 +1742,8 @@ compare_relink_single_node (GnlComposition * comp, GNode * node,
     guint nbchilds = g_node_n_children (node);
     GnlOperation *oper = (GnlOperation *) newobj;
 
-    GST_LOG_OBJECT (newobj, "is operation, analyzing the %d childs", nbchilds);
+    GST_LOG_OBJECT (newobj, "is a %s operation, analyzing the %d childs",
+        oper->dynamicsinks ? "dynamic" : "regular", nbchilds);
     if (oper->dynamicsinks)
       g_object_set (G_OBJECT (newobj), "sinks", nbchilds, NULL);
     for (child = node->children; child; child = child->next)
@@ -2330,10 +2343,11 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
 
   COMP_OBJECTS_LOCK (comp);
 
-  if ((((GnlObject *) element)->priority == G_MAXUINT32)
-      && comp->private->defaultobject) {
+  if (((((GnlObject *) element)->priority == G_MAXUINT32) ||
+          GNL_OBJECT_IS_EXPANDABLE (element)) &&
+      g_list_find (comp->private->expandables, element)) {
     GST_WARNING_OBJECT (comp,
-        "We already have a default source, remove it before adding new one");
+        "We already have an expandable, remove it before adding new one");
     ret = FALSE;
     goto chiringuito;
   }
@@ -2352,7 +2366,8 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
   /* wrap new element in a GnlCompositionEntry ... */
   entry = g_new0 (GnlCompositionEntry, 1);
   entry->object = (GnlObject *) element;
-  if ((((GnlObject *) element)->priority != G_MAXUINT32)) {
+  if (G_LIKELY ((((GnlObject *) element)->priority != G_MAXUINT32) &&
+          !GNL_OBJECT_IS_EXPANDABLE (element))) {
     /* Only react on non-default objects properties */
     entry->starthandler = g_signal_connect (G_OBJECT (element),
         "notify::start", G_CALLBACK (object_start_stop_priority_changed), comp);
@@ -2380,9 +2395,11 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
   g_hash_table_insert (comp->private->objects_hash, element, entry);
 
   /* Special case for default source. */
-  if (((GnlObject *) element)->priority == G_MAXUINT32) {
+  if ((((GnlObject *) element)->priority == G_MAXUINT32) ||
+      GNL_OBJECT_IS_EXPANDABLE (element)) {
     /* It doesn't get added to objects_start and objects_stop. */
-    comp->private->defaultobject = ((GnlObject *) element);
+    comp->private->expandables = g_list_prepend (comp->private->expandables,
+        element);
     goto chiringuito;
   }
 
@@ -2470,8 +2487,11 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
   gst_element_set_locked_state (element, FALSE);
 
   /* handle default source */
-  if (((GnlObject *) element)->priority == G_MAXUINT32) {
-    comp->private->defaultobject = NULL;
+  if ((((GnlObject *) element)->priority == G_MAXUINT32) ||
+      GNL_OBJECT_IS_EXPANDABLE (element)) {
+    /* Find it in the list */
+    comp->private->expandables =
+        g_list_remove (comp->private->expandables, element);
   } else {
     /* remove it from the objects list and resort the lists */
     comp->private->objects_start = g_list_remove
@@ -2487,7 +2507,8 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
     goto chiringuito;
 
   update_required = OBJECT_IN_ACTIVE_SEGMENT (comp, element) ||
-      ((GnlObject *) element)->priority == G_MAXUINT32;
+      (((GnlObject *) element)->priority == G_MAXUINT32) ||
+      GNL_OBJECT_IS_EXPANDABLE (element);
 
   if (update_required && comp->private->can_update) {
     curpos = get_current_position (comp);
