@@ -130,11 +130,9 @@ struct _GnlCompositionPrivate
 
 };
 
-#define OBJECT_IN_ACTIVE_SEGMENT(comp,element) \
-  (((((GnlObject*)element)->start >= comp->private->segment_start) && \
-    (((GnlObject*)element)->start < comp->private->segment_stop)) ||	\
-   ((((GnlObject*)element)->stop > comp->private->segment_start) &&	\
-    (((GnlObject*)element)->stop <= comp->private->segment_stop)))	\
+#define OBJECT_IN_ACTIVE_SEGMENT(comp,element)				\
+  ((GNL_OBJECT_CAST(element)->start < comp->private->segment_stop) &&	\
+   (GNL_OBJECT_CAST(element)->stop >= comp->private->segment_start))
 
 static void gnl_composition_dispose (GObject * object);
 static void gnl_composition_finalize (GObject * object);

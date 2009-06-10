@@ -33,6 +33,7 @@ G_BEGIN_DECLS
   (gnl_object_get_type())
 #define GNL_OBJECT(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj),GNL_TYPE_OBJECT,GnlObject))
+#define GNL_OBJECT_CAST(obj) ((GnlObject*) (obj))
 #define GNL_OBJECT_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_CAST((klass),GNL_TYPE_OBJECT,GnlObjectClass))
 #define GNL_OBJECT_GET_CLASS(obj) \
