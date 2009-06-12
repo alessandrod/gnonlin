@@ -658,7 +658,7 @@ control_internal_pad (GstPad * ghostpad, GnlObject * object)
   internal = gst_pad_get_peer (target);
   gst_object_unref (target);
 
-  if (!(priv = gst_pad_get_element_private (internal))) {
+  if (G_UNLIKELY (!(priv = gst_pad_get_element_private (internal)))) {
     GST_DEBUG_OBJECT (internal,
         "Creating a GnlPadPrivate to put in element_private");
     priv = g_new0 (GnlPadPrivate, 1);
@@ -676,9 +676,6 @@ control_internal_pad (GstPad * ghostpad, GnlObject * object)
         GST_DEBUG_FUNCPTR (internalpad_event_function));
     gst_pad_set_query_function (internal,
         GST_DEBUG_FUNCPTR (internalpad_query_function));
-  } else {
-    GST_WARNING_OBJECT (internal,
-        "internal pad already had an element_private");
   }
 
   priv->object = object;
