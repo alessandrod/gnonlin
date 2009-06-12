@@ -861,6 +861,9 @@ beach:
   Updates it and sends the seek event.
   Sends flush events downstream if needed.
   can be called by user_seek or segment_done
+
+  initial : FIXME : ???? Always seems to be TRUE
+  update : TRUE from EOS, FALSE from seek
 */
 
 static gboolean
@@ -869,26 +872,13 @@ seek_handling (GnlComposition * comp, gboolean initial, gboolean update)
   GST_DEBUG_OBJECT (comp, "initial:%d, update:%d", initial, update);
 
   COMP_FLUSHING_LOCK (comp);
-
   GST_DEBUG_OBJECT (comp, "Setting flushing to TRUE");
   comp->private->flushing = TRUE;
-
-  /* Send downstream flush start/stop if needed */
-  /* FIXME : The problem is that we might have a streaming thread which will
-   * be able to push AFTER FLUSH_STOP.
-   * We can't really block... since maybe we're not pushing anything currently !!! */
-  if (comp->private->ghostpad
-      && (comp->private->segment->flags & GST_SEEK_FLAG_FLUSH)
-      && (!update)) {
-    GST_LOG_OBJECT (comp, "Sending downstream flush start/stop");
-    gst_pad_push_event (comp->private->ghostpad, gst_event_new_flush_start ());
-    gst_pad_push_event (comp->private->ghostpad, gst_event_new_flush_stop ());
-  }
-
   COMP_FLUSHING_UNLOCK (comp);
 
   if (update || have_to_update_pipeline (comp)) {
-    update_pipeline (comp, comp->private->segment->start, initial, TRUE, FALSE);
+    update_pipeline (comp, comp->private->segment->start, initial, TRUE,
+        !update);
   }
 
   return TRUE;
