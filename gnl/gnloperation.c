@@ -649,6 +649,7 @@ remove_sink_pad (GnlOperation * operation, GstPad * sinkpad)
     gst_element_release_request_pad (operation->element, target);
     operation->sinks = g_list_remove (operation->sinks, sinkpad);
     gnl_object_remove_ghost_pad ((GnlObject *) operation, sinkpad);
+    operation->realsinks--;
   }
 
 beach:
