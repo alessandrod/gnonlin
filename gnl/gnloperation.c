@@ -645,6 +645,7 @@ remove_sink_pad (GnlOperation * operation, GstPad * sinkpad)
     GstPad *target = gst_ghost_pad_get_target ((GstGhostPad *) sinkpad);
 
     /* release the target pad */
+    gnl_object_ghost_pad_set_target ((GnlObject *) operation, sinkpad, NULL);
     gst_element_release_request_pad (operation->element, target);
     operation->sinks = g_list_remove (operation->sinks, sinkpad);
     gnl_object_remove_ghost_pad ((GnlObject *) operation, sinkpad);
@@ -658,10 +659,10 @@ static void
 synchronize_sinks (GnlOperation * operation)
 {
 
-  GST_DEBUG_OBJECT (operation, "num_sinks:%d , realsinks:%d",
-      operation->num_sinks, operation->realsinks);
-  if ((operation->dynamicsinks) ||
-      (operation->num_sinks == operation->realsinks))
+  GST_DEBUG_OBJECT (operation, "num_sinks:%d , realsinks:%d, dynamicsinks:%d",
+      operation->num_sinks, operation->realsinks, operation->dynamicsinks);
+
+  if (operation->num_sinks == operation->realsinks)
     return;
 
   if (operation->num_sinks > operation->realsinks) {
