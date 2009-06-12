@@ -2520,7 +2520,7 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
 
   /* If we removed within currently configured segment, or it was the default source, *
    * update pipeline */
-  if (G_LIKELY (comp->private->can_update && update_required))
+  if (G_LIKELY (update_required))
     update_pipeline (comp, curpos, TRUE, TRUE, TRUE);
   else {
     if (!comp->private->can_update)
