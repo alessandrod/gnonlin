@@ -968,10 +968,10 @@ gnl_composition_event_handler (GstPad * ghostpad, GstEvent * event)
   /* FIXME : What should we do here if waitingpads != 0 ?? */
   /*            Delay ? Ignore ? Refuse ? */
 
-  if (res) {
+  if (res && comp->private->ghostpad) {
     GST_DEBUG_OBJECT (comp, "About to call gnl_event_pad_func()");
     COMP_OBJECTS_LOCK (comp);
-    res = comp->private->gnl_event_pad_func (ghostpad, event);
+    res = comp->private->gnl_event_pad_func (comp->private->ghostpad, event);
     COMP_OBJECTS_UNLOCK (comp);
     GST_DEBUG_OBJECT (comp, "Done calling gnl_event_pad_func() %d", res);
   }
@@ -1005,10 +1005,12 @@ gnl_composition_ghost_pad_set_target (GnlComposition * comp, GstPad * target)
     /* Create new ghostpad */
     comp->private->ghostpad =
         gnl_object_ghost_pad_no_target ((GnlObject *) comp, "src", GST_PAD_SRC);
-    GST_DEBUG_OBJECT (comp->private->ghostpad,
-        "About to replace event_pad_func");
-    comp->private->gnl_event_pad_func =
-        GST_PAD_EVENTFUNC (comp->private->ghostpad);
+    if (!comp->private->gnl_event_pad_func) {
+      GST_DEBUG_OBJECT (comp->private->ghostpad,
+          "About to replace event_pad_func");
+      comp->private->gnl_event_pad_func =
+          GST_PAD_EVENTFUNC (comp->private->ghostpad);
+    }
     gst_pad_set_event_function (comp->private->ghostpad,
         GST_DEBUG_FUNCPTR (gnl_composition_event_handler));
     GST_DEBUG_OBJECT (comp->private->ghostpad, "eventfunc is now %s",
