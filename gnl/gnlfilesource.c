@@ -121,7 +121,7 @@ gnl_filesource_init (GnlFileSource * filesource,
   GstElement *filesrc, *decodebin;
 
   GST_OBJECT_FLAG_SET (filesource, GNL_OBJECT_SOURCE);
-  filesource->private = g_new0 (GnlFileSourcePrivate, 1);
+  filesource->priv = g_new0 (GnlFileSourcePrivate, 1);
 
   /* We create a bin with source and decodebin within */
 
@@ -138,7 +138,7 @@ gnl_filesource_init (GnlFileSource * filesource,
     g_warning
         ("Could not create a decodebin element, are you sure you have decodebin installed ?");
 
-  filesource->private->filesource = filesrc;
+  filesource->priv->filesource = filesrc;
 
   if (filesrc && decodebin) {
     gst_bin_add_many (GST_BIN (filesource), filesrc, decodebin, NULL);
@@ -159,11 +159,11 @@ gnl_filesource_dispose (GObject * object)
 {
   GnlFileSource *filesource = (GnlFileSource *) object;
 
-  if (filesource->private->dispose_has_run)
+  if (filesource->priv->dispose_has_run)
     return;
 
   GST_INFO_OBJECT (object, "dispose");
-  filesource->private->dispose_has_run = TRUE;
+  filesource->priv->dispose_has_run = TRUE;
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
   GST_INFO_OBJECT (object, "dispose END");
@@ -175,7 +175,7 @@ gnl_filesource_finalize (GObject * object)
   GnlFileSource *filesource = (GnlFileSource *) object;
 
   GST_INFO_OBJECT (object, "finalize");
-  g_free (filesource->private);
+  g_free (filesource->priv);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -189,7 +189,7 @@ gnl_filesource_set_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case ARG_LOCATION:
       /* proxy to gnomevfssrc */
-      g_object_set_property (G_OBJECT (fs->private->filesource), "location",
+      g_object_set_property (G_OBJECT (fs->priv->filesource), "location",
           value);
       break;
     default:
@@ -207,7 +207,7 @@ gnl_filesource_get_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case ARG_LOCATION:
       /* proxy from gnomevfssrc */
-      g_object_get_property (G_OBJECT (fs->private->filesource), "location",
+      g_object_get_property (G_OBJECT (fs->priv->filesource), "location",
           value);
       break;
     default:

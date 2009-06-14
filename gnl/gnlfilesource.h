@@ -46,7 +46,7 @@ struct _GnlFileSource
 
   /*< private >*/
 
-  GnlFileSourcePrivate *private;
+  GnlFileSourcePrivate *priv;
 };
 
 struct _GnlFileSourceClass
