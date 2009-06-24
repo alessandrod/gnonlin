@@ -1897,8 +1897,6 @@ compare_deactivate_single_node (GnlComposition * comp, GNode * node,
       newparent =
           G_NODE_IS_ROOT (newnode) ? NULL : (GnlObject *) newnode->parent->data;
 
-    GST_LOG_OBJECT (comp, "oldparent:%p, newparent:%p, newnode:%p, oldobj:%p");
-
     if ((!newnode) || (oldparent != newparent) ||
         (newparent &&
             (g_node_child_index (node, oldobj) != g_node_child_index (newnode,
