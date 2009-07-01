@@ -24,6 +24,7 @@
 #endif
 
 #include "gnl.h"
+#include "gnlmarshal.h"
 
 /**
  * SECTION:element-gnloperation
