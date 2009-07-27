@@ -133,7 +133,7 @@ gnl_filesource_init (GnlFileSource * filesource,
           ("Could not create a gnomevfssrc or filesource element, are you sure you have any of them installed ?");
   if (!(decodebin =
           gst_element_factory_make ("decodebin2", "internal-decodebin"))
-      || !(decodebin =
+      && !(decodebin =
           gst_element_factory_make ("decodebin", "internal-decodebin")))
     g_warning
         ("Could not create a decodebin element, are you sure you have decodebin installed ?");
