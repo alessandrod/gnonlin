@@ -722,7 +722,6 @@ gnl_object_ghost_pad_full (GnlObject * object, const gchar * name,
     return NULL;
   }
 
-
   /* activate pad */
   gst_pad_set_active (ghost, TRUE);
   /* add it to element */
@@ -811,6 +810,17 @@ gnl_object_ghost_pad_set_target (GnlObject * object, GstPad * ghost,
   /* set target */
   if (!(gst_ghost_pad_set_target (GST_GHOST_PAD (ghost), target)))
     return FALSE;
+
+  if (target) {
+    GstCaps *negotiated_caps;
+
+    /* if the target has negotiated caps, forward them to the ghost */
+    if ((negotiated_caps = gst_pad_get_negotiated_caps (target))) {
+      gst_pad_set_caps (ghost, negotiated_caps);
+      gst_caps_unref (negotiated_caps);
+    }
+  }
+
 
   if (!GST_OBJECT_IS_FLOATING (ghost))
     control_internal_pad (ghost, object);
