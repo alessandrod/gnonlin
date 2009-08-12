@@ -954,15 +954,18 @@ gnl_composition_event_handler (GstPad * ghostpad, GstEvent * event)
       break;
   }
 
-  /* FIXME : What should we do here if waitingpads != 0 ?? */
-  /*            Delay ? Ignore ? Refuse ? */
-
   if (res && comp->priv->ghostpad) {
-    GST_DEBUG_OBJECT (comp, "About to call gnl_event_pad_func()");
     COMP_OBJECTS_LOCK (comp);
-    res = comp->priv->gnl_event_pad_func (comp->priv->ghostpad, event);
+    /* If the timeline isn't entirely reconstructed, we silently ignore the 
+     * event. In the case of seeks the pipeline will already be correctly 
+     * configured at this point*/
+    if (comp->priv->waitingpads == 0) {
+      GST_DEBUG_OBJECT (comp, "About to call gnl_event_pad_func()");
+      res = comp->priv->gnl_event_pad_func (comp->priv->ghostpad, event);
+      GST_DEBUG_OBJECT (comp, "Done calling gnl_event_pad_func() %d", res);
+    } else
+      gst_event_unref (event);
     COMP_OBJECTS_UNLOCK (comp);
-    GST_DEBUG_OBJECT (comp, "Done calling gnl_event_pad_func() %d", res);
   }
   gst_object_unref (comp);
   return res;
