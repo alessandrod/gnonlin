@@ -1607,14 +1607,29 @@ no_more_pads_object_cb (GstElement * element, GnlComposition * comp)
         comp->priv->waitingpads);
 
     if (tmp->parent) {
-      /* child, link to parent */
-      /* FIXME, shouldn't we check the order in which we link to the parent ? */
-      if (!(gst_element_link (element, GST_ELEMENT (tmp->parent->data)))) {
-        GST_WARNING_OBJECT (comp, "Couldn't link %s to %s",
-            GST_ELEMENT_NAME (element),
-            GST_ELEMENT_NAME (GST_ELEMENT (tmp->parent->data)));
+      GstElement *parent = (GstElement *) tmp->parent->data;
+      GstPad *sinkpad;
+
+      /* Get an unlinked sinkpad from the parent */
+      sinkpad = get_unlinked_sink_ghost_pad ((GnlOperation *) parent);
+      if (G_UNLIKELY (sinkpad == NULL)) {
+        GST_WARNING_OBJECT (comp, "Couldn't find an unlinked sinkpad from %s",
+            GST_ELEMENT_NAME (parent));
         goto done;
       }
+
+      /* Link pad to parent sink pad */
+      if (G_UNLIKELY (gst_pad_link (pad, sinkpad) != GST_PAD_LINK_OK)) {
+        GST_WARNING_OBJECT (comp, "Failed to link pads, error:");
+        gst_object_unref (sinkpad);
+        goto done;
+      }
+
+      /* inform operation of incoming stream priority */
+      gnl_operation_signal_input_priority_changed ((GnlOperation *) parent,
+          sinkpad, object->priority);
+
+      gst_object_unref (sinkpad);
       gst_pad_set_blocked_async (pad, FALSE, (GstPadBlockCallback) pad_blocked,
           comp);
     }
@@ -1747,17 +1762,34 @@ compare_relink_single_node (GnlComposition * comp, GNode * node,
 
       /* relink to new parent in required order */
       if (newparent) {
+        GstPad *sinkpad;
+
         GST_LOG_OBJECT (comp, "Linking %s and %s",
             GST_ELEMENT_NAME (GST_ELEMENT (newobj)),
             GST_ELEMENT_NAME (GST_ELEMENT (newparent)));
-        /* FIXME : do it in required order */
-        if (!(gst_element_link ((GstElement *) newobj,
-                    (GstElement *) newparent)))
-          GST_ERROR_OBJECT (comp, "Couldn't link %s to %s",
-              GST_ELEMENT_NAME (newobj), GST_ELEMENT_NAME (newparent));
+
+        sinkpad = get_unlinked_sink_ghost_pad ((GnlOperation *) newparent);
+        if (G_UNLIKELY (sinkpad == NULL)) {
+          GST_WARNING_OBJECT (comp, "Couldn't find an unlinked sinkpad from %s",
+              GST_ELEMENT_NAME (newparent));
+        } else {
+          if (G_UNLIKELY (gst_pad_link (srcpad, sinkpad) != GST_PAD_LINK_OK)) {
+            GST_WARNING_OBJECT (comp, "Failed to link pads");
+          }
+          gst_object_unref (sinkpad);
+        }
       }
     } else
       GST_LOG_OBJECT (newobj, "Same parent and same position in the new stack");
+
+    /* If there's an operation, inform it about priority changes */
+    if (newparent) {
+      GstPad *sinkpad = gst_pad_get_peer (srcpad);
+      gnl_operation_signal_input_priority_changed ((GnlOperation *) newparent,
+          sinkpad, newobj->priority);
+      gst_object_unref (sinkpad);
+    }
+
   } else {
     GnlCompositionEntry *entry = COMP_ENTRY (comp, newobj);
 
