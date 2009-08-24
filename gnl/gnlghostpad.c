@@ -52,11 +52,13 @@ translate_incoming_qos (GnlObject * object, GstEvent * event)
       "incoming qos prop:%f, diff:%" G_GINT64_FORMAT
       ", timestamp:%" GST_TIME_FORMAT, prop, diff, GST_TIME_ARGS (timestamp));
 
-  if (!(gnl_object_to_media_time (object, timestamp, &timestamp2)) ||
-      ((diff < 0) && (-diff > timestamp))) {
+  if (!(gnl_object_to_media_time (object, timestamp, &timestamp2))) {
     GST_DEBUG ("Invalid timestamp, discarding event");
     gst_event_unref (event);
   } else {
+    if (diff < 0 && -diff > timestamp2)
+      diff = -timestamp2;
+
     GST_DEBUG_OBJECT (object,
         "translated qos prop:%f, diff:%" G_GINT64_FORMAT
         ", timestamp:%" GST_TIME_FORMAT, prop, diff,

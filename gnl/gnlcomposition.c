@@ -162,9 +162,9 @@ static gint objects_stop_compare (GnlObject * a, GnlObject * b);
 static GstClockTime get_current_position (GnlComposition * comp);
 
 static void gnl_composition_set_update (GnlComposition * comp, gboolean update);
-static gboolean
-update_pipeline (GnlComposition * comp, GstClockTime currenttime,
-    gboolean initial, gboolean change_state, gboolean modify);
+static gboolean update_pipeline (GnlComposition * comp,
+    GstClockTime currenttime, gboolean initial, gboolean change_state,
+    gboolean modify);
 
 
 #define COMP_REAL_START(comp) \
