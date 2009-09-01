@@ -118,6 +118,7 @@ struct _GnlCompositionPrivate
 
   /* Seek segment handler */
   GstSegment *segment;
+  GstSegment *outside_segment;
 
   /* number of pads we are waiting to appear so be can do proper linking */
   guint waitingpads;
@@ -324,6 +325,7 @@ gnl_composition_init (GnlComposition * comp,
   comp->priv->pending_idle = 0;
 
   comp->priv->segment = gst_segment_new ();
+  comp->priv->outside_segment = gst_segment_new ();
 
   comp->priv->waitingpads = 0;
 
@@ -388,6 +390,7 @@ gnl_composition_finalize (GObject * object)
 
   g_mutex_free (comp->priv->objects_lock);
   gst_segment_free (comp->priv->segment);
+  gst_segment_free (comp->priv->outside_segment);
 
   g_mutex_free (comp->priv->flushing_lock);
 
@@ -522,6 +525,7 @@ gnl_composition_reset (GnlComposition * comp)
   comp->priv->segment_stop = GST_CLOCK_TIME_NONE;
 
   gst_segment_init (comp->priv->segment, GST_FORMAT_TIME);
+  gst_segment_init (comp->priv->outside_segment, GST_FORMAT_TIME);
 
   if (comp->priv->current)
     g_node_destroy (comp->priv->current);
@@ -886,7 +890,6 @@ seek_handling (GnlComposition * comp, gboolean initial, gboolean update)
 static void
 handle_seek_event (GnlComposition * comp, GstEvent * event)
 {
-  gboolean update;
   gdouble rate;
   GstFormat format;
   GstSeekFlags flags;
@@ -901,7 +904,9 @@ handle_seek_event (GnlComposition * comp, GstEvent * event)
       GST_TIME_ARGS (cur), GST_TIME_ARGS (stop), flags);
 
   gst_segment_set_seek (comp->priv->segment,
-      rate, format, flags, cur_type, cur, stop_type, stop, &update);
+      rate, format, flags, cur_type, cur, stop_type, stop, NULL);
+  gst_segment_set_seek (comp->priv->outside_segment,
+      rate, format, flags, cur_type, cur, stop_type, stop, NULL);
 
   GST_DEBUG_OBJECT (comp, "Segment now has flags:%d",
       comp->priv->segment->flags);
@@ -943,11 +948,64 @@ gnl_composition_event_handler (GstPad * ghostpad, GstEvent * event)
       gdouble prop;
       GstClockTimeDiff diff;
       GstClockTime timestamp;
+      GstClockTimeDiff curdiff;
 
       gst_event_parse_qos (event, &prop, &diff, &timestamp);
-      GST_INFO_OBJECT (comp, "timestamp:%" GST_TIME_FORMAT,
-          GST_TIME_ARGS (timestamp));
-      /* else we let it go through (gnlobject will take care of time-shifting) */
+
+      GST_INFO_OBJECT (comp,
+          "timestamp:%" GST_TIME_FORMAT " segment.start:%" GST_TIME_FORMAT
+          " segment_start%" GST_TIME_FORMAT, GST_TIME_ARGS (timestamp),
+          GST_TIME_ARGS (comp->priv->outside_segment->start),
+          GST_TIME_ARGS (comp->priv->segment_start));
+
+      /* The problem with QoS events is the following:
+       * At each new internal segment (i.e. when we re-arrange our internal
+       * elements) we send flushing seeks to those elements (to properly
+       * configure their playback range) but don't let the FLUSH events get
+       * downstream.
+       *
+       * The problem is that the QoS running timestamps we receive from
+       * downstream will not have taken into account those flush.
+       *
+       * What we need to do is to translate to our internal running timestamps
+       * which for each configured segment starts at 0 for those elements.
+       *
+       * The generic algorithm for the incoming running timestamp translation
+       * is therefore:
+       *     (original_seek_time : original seek position received from usptream)
+       *     (current_segment_start : Start position of the currently configured
+       *                              timeline segment)
+       *
+       *     difference = original_seek_time - current_segment_start
+       *     new_qos_position = upstream_qos_position - difference
+       *
+       * The new_qos_position is only valid when:
+       *    * it applies to the current segment (difference > 0)
+       *    * The QoS difference + timestamp is greater than the difference
+       *
+       */
+
+      if (GST_CLOCK_TIME_IS_VALID (comp->priv->outside_segment->start)) {
+        /* We'll either create a new event or discard it */
+        gst_event_unref (event);
+
+        curdiff =
+            comp->priv->segment_start - comp->priv->outside_segment->start;
+        if ((timestamp < curdiff) || (curdiff < timestamp - diff)) {
+          GST_DEBUG_OBJECT (comp,
+              "QoS event outside of current segment, discarding");
+          /* The QoS timestamp is before the currently set-up pipeline */
+          goto beach;
+        }
+
+        /* Substract the amount of running time we've already outputted
+         * until the currently configured pipeline from the QoS timestamp.*/
+        timestamp -= curdiff;
+        GST_INFO_OBJECT (comp,
+            "Creating new QoS event with timestamp %" GST_TIME_FORMAT,
+            GST_TIME_ARGS (timestamp));
+        event = gst_event_new_qos (prop, diff, timestamp);
+      }
       break;
     }
     default:
@@ -967,6 +1025,8 @@ gnl_composition_event_handler (GstPad * ghostpad, GstEvent * event)
       gst_event_unref (event);
     COMP_OBJECTS_UNLOCK (comp);
   }
+
+beach:
   gst_object_unref (comp);
   return res;
 }
