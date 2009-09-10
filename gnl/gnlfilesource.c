@@ -200,8 +200,17 @@ gnl_filesource_get_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case ARG_LOCATION:
-      /* proxy from gnomevfssrc */
-      g_object_get_property (G_OBJECT (fs->filesource), "location", value);
+      if (fs->filesource) {
+        g_object_get_property (G_OBJECT (fs->filesource), "location", value);
+      } else {
+        const gchar *uri = NULL;;
+
+        g_object_get (G_OBJECT (fs->decodebin), "uri", &uri, NULL);
+        if (uri != NULL && g_str_has_prefix (uri, "file://"))
+          g_value_set_string (value, uri + 7);
+        else
+          g_value_set_string (value, NULL);
+      }
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
