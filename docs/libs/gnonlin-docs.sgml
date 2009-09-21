@@ -18,9 +18,10 @@
   <chapter>
     <title>GNonLin Elements</title>
     <xi:include href="xml/element-gnlcomposition.xml"/>
-    <xi:include href="xml/element-gnlfilesource.xml"/>
-    <xi:include href="xml/element-gnloperation.xml"/>
     <xi:include href="xml/element-gnlsource.xml"/>
+    <xi:include href="xml/element-gnlfilesource.xml"/>
+    <xi:include href="xml/element-gnlurisource.xml"/>
+    <xi:include href="xml/element-gnloperation.xml"/>
   </chapter>
 
   <chapter>

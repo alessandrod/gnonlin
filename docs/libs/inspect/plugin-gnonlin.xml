@@ -3,10 +3,10 @@
   <description>Standard elements for non-linear multimedia editing</description>
   <filename>../../gnl/.libs/libgnl.so</filename>
   <basename>libgnl.so</basename>
-  <version>0.10.10.2</version>
+  <version>0.10.13</version>
   <license>LGPL</license>
   <source>gnonlin</source>
-  <package>GNonLin CVS/prerelease</package>
+  <package>GNonLin source release</package>
   <origin>Unknown package origin</origin>
   <elements>
     <element>
@@ -66,6 +66,21 @@
       <class>Filter/Editor</class>
       <description>Manages source elements</description>
       <author>Wim Taymans &lt;wim.taymans@gmail.com&gt;, Edward Hervey &lt;bilboed@bilboed.com&gt;</author>
+      <pads>
+        <caps>
+          <name>src</name>
+          <direction>source</direction>
+          <presence>sometimes</presence>
+          <details>ANY</details>
+        </caps>
+      </pads>
+    </element>
+    <element>
+      <name>gnlurisource</name>
+      <longname>GNonLin URI Source</longname>
+      <class>Filter/Editor</class>
+      <description>High-level URI Source element</description>
+      <author>Edward Hervey &lt;bilboed@bilboed.com&gt;</author>
       <pads>
         <caps>
           <name>src</name>

@@ -128,3 +128,13 @@
 <DEFAULT>TRUE</DEFAULT>
 </ARG>
 
+<ARG>
+<NAME>GnlURISource::uri</NAME>
+<TYPE>gchar*</TYPE>
+<RANGE></RANGE>
+<FLAGS>rw</FLAGS>
+<NICK>Uri</NICK>
+<BLURB>URI of the resource to use.</BLURB>
+<DEFAULT>NULL</DEFAULT>
+</ARG>
+

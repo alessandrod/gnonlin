@@ -11,11 +11,13 @@ GObject
         GstPipeline
         GnlObject
           GnlSource
-            GnlFileSource
+            GnlURISource
+              GnlFileSource
           GnlComposition
           GnlOperation
     GstBus
     GstTask
+    GstTaskPool
     GstClock
     GstPlugin
     GstRegistry

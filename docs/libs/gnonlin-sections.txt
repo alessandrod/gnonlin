@@ -23,6 +23,14 @@ GnlFileSourceClass
 </SECTION>
 
 <SECTION>
+<FILE>element-gnlurisource</FILE>
+<TITLE>GnlURISource</TITLE>
+GnlURISource
+<SUBSECTION Standard>
+GnlURISourceClass
+</SECTION>
+
+<SECTION>
 <FILE>element-gnloperation</FILE>
 <TITLE>GnlOperation</TITLE>
 GnlOperation
