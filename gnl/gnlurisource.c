@@ -1,0 +1,154 @@
+/* Gnonlin
+ * Copyright (C) <2005-2008> Edward Hervey <bilboed@bilboed.com>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * Boston, MA 02111-1307, USA.
+ */
+
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "gnl.h"
+#include "gnlurisource.h"
+
+/**
+ * SECTION:element-gnlurisource
+ * @short_description: GNonLin File Source
+ *
+ * GnlURISource is a #GnlSource which reads and decodes the contents
+ * of a given file. The data in the file is decoded using any available
+ * GStreamer plugins.
+ */
+
+static GstStaticPadTemplate gnl_urisource_src_template =
+GST_STATIC_PAD_TEMPLATE ("src",
+    GST_PAD_SRC,
+    GST_PAD_SOMETIMES,
+    GST_STATIC_CAPS_ANY);
+
+GST_DEBUG_CATEGORY_STATIC (gnlurisource);
+#define GST_CAT_DEFAULT gnlurisource
+
+
+GST_BOILERPLATE (GnlURISource, gnl_urisource, GnlSource, GNL_TYPE_SOURCE);
+
+static GstElementDetails gnl_urisource_details = GST_ELEMENT_DETAILS
+    ("GNonLin File Source",
+    "Filter/Editor",
+    "High-level URI Source element",
+    "Edward Hervey <bilboed@bilboed.com>");
+
+enum
+{
+  ARG_0,
+  ARG_URI,
+};
+
+static void
+gnl_urisource_set_property (GObject * object, guint prop_id,
+    const GValue * value, GParamSpec * pspec);
+
+static void
+gnl_urisource_get_property (GObject * object, guint prop_id,
+    GValue * value, GParamSpec * pspec);
+
+static void
+gnl_urisource_base_init (gpointer g_class)
+{
+  GstElementClass *gstclass = GST_ELEMENT_CLASS (g_class);
+
+  gst_element_class_set_details (gstclass, &gnl_urisource_details);
+}
+
+static void
+gnl_urisource_class_init (GnlURISourceClass * klass)
+{
+  GObjectClass *gobject_class;
+  GstElementClass *gstelement_class;
+
+  gobject_class = (GObjectClass *) klass;
+  gstelement_class = (GstElementClass *) klass;
+  parent_class = g_type_class_ref (GNL_TYPE_OBJECT);
+
+  GST_DEBUG_CATEGORY_INIT (gnlurisource, "gnlurisource",
+      GST_DEBUG_FG_BLUE | GST_DEBUG_BOLD, "GNonLin File Source Element");
+
+  gobject_class->set_property = GST_DEBUG_FUNCPTR (gnl_urisource_set_property);
+  gobject_class->get_property = GST_DEBUG_FUNCPTR (gnl_urisource_get_property);
+
+  g_object_class_install_property (gobject_class, ARG_URI,
+      g_param_spec_string ("uri", "Uri",
+          "Uri of the file to use", NULL, G_PARAM_READWRITE));
+
+  gst_element_class_add_pad_template (gstelement_class,
+      gst_static_pad_template_get (&gnl_urisource_src_template));
+}
+
+static void
+gnl_urisource_init (GnlURISource * urisource,
+    GnlURISourceClass * klass G_GNUC_UNUSED)
+{
+  GstElement *decodebin = NULL;
+
+  GST_OBJECT_FLAG_SET (urisource, GNL_OBJECT_SOURCE);
+
+  /* We create a bin with source and decodebin within */
+  decodebin =
+      gst_element_factory_make ("uridecodebin", "internal-uridecodebin");
+
+  gst_bin_add (GST_BIN (urisource), decodebin);
+}
+
+static inline void
+gnl_urisource_set_uri (GnlURISource * fs, const gchar * uri)
+{
+  g_object_set (GNL_SOURCE (fs)->element, "uri", uri, NULL);
+}
+
+static void
+gnl_urisource_set_property (GObject * object, guint prop_id,
+    const GValue * value, GParamSpec * pspec)
+{
+  GnlURISource *fs = (GnlURISource *) object;
+
+  switch (prop_id) {
+    case ARG_URI:
+      gnl_urisource_set_uri (fs, g_value_get_string (value));
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+gnl_urisource_get_property (GObject * object, guint prop_id,
+    GValue * value, GParamSpec * pspec)
+{
+  GnlURISource *fs = (GnlURISource *) object;
+
+  switch (prop_id) {
+    case ARG_URI:
+      g_object_get_property ((GObject *) GNL_SOURCE (fs)->element, "uri",
+          value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+
+}
