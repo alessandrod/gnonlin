@@ -1,1 +1,9 @@
+<SIGNAL>
+<NAME>GnlOperation::input-priority-changed</NAME>
+<RETURNS>void</RETURNS>
+<FLAGS>l</FLAGS>
+GnlOperation *gnloperation
+GstPad *arg1
+guint  arg2
+</SIGNAL>
 

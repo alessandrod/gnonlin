@@ -13,8 +13,8 @@
 <TYPE>gchar*</TYPE>
 <RANGE></RANGE>
 <FLAGS>rw</FLAGS>
-<NICK>File Location</NICK>
-<BLURB>Location of the file to read.</BLURB>
+<NICK>Location</NICK>
+<BLURB>Location of the file to use.</BLURB>
 <DEFAULT>NULL</DEFAULT>
 </ARG>
 
@@ -116,6 +116,16 @@
 <NICK>Stop</NICK>
 <BLURB>The stop position relative to the parent.</BLURB>
 <DEFAULT>0</DEFAULT>
+</ARG>
+
+<ARG>
+<NAME>GnlObject::expandable</NAME>
+<TYPE>gboolean</TYPE>
+<RANGE></RANGE>
+<FLAGS>rw</FLAGS>
+<NICK>Expandable</NICK>
+<BLURB>Expand to the full duration of the container composition.</BLURB>
+<DEFAULT>FALSE</DEFAULT>
 </ARG>
 
 <ARG>
