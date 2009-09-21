@@ -12,6 +12,7 @@ libgnl_la_SOURCES =		\
 	gnlmarshal.c		\
 	gnloperation.c		\
 	gnlsource.c		\
+	gnlurisource.c		\
 	gnlfilesource.c
 libgnl_la_CFLAGS = $(GST_CFLAGS)
 libgnl_la_LIBADD = $(GST_LIBS)
@@ -27,6 +28,7 @@ gnl_headers =			\
 	gnloperation.h		\
 	gnlsource.h		\
 	gnltypes.h		\
+	gnlurisource.h		\
 	gnlfilesource.h
 
 DISTCLEANFILE = $(CLEANFILES)

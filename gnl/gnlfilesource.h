@@ -26,6 +26,7 @@
 
 #include <gst/gst.h>
 #include "gnlobject.h"
+#include "gnlurisource.h"
 
 G_BEGIN_DECLS
 #define GNL_TYPE_FILESOURCE \
@@ -41,16 +42,12 @@ G_BEGIN_DECLS
 
 struct _GnlFileSource
 {
-  GnlSource parent;
-
-  /*< private >*/
-  GstElement *filesource;
-  GstElement *decodebin;
+  GnlURISource parent;
 };
 
 struct _GnlFileSourceClass
 {
-  GnlSourceClass parent_class;
+  GnlURISourceClass parent_class;
 };
 
 GType gnl_filesource_get_type (void);

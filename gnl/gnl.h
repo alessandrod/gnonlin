@@ -31,6 +31,7 @@
 #include "gnlcomposition.h"
 #include "gnloperation.h"
 
+#include "gnlurisource.h"
 #include "gnlfilesource.h"
 
 #endif /* __GST_H__ */
