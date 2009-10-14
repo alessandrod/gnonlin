@@ -47,7 +47,7 @@ GST_DEBUG_CATEGORY_STATIC (gnlurisource);
 GST_BOILERPLATE (GnlURISource, gnl_urisource, GnlSource, GNL_TYPE_SOURCE);
 
 static GstElementDetails gnl_urisource_details = GST_ELEMENT_DETAILS
-    ("GNonLin File Source",
+    ("GNonLin URI Source",
     "Filter/Editor",
     "High-level URI Source element",
     "Edward Hervey <bilboed@bilboed.com>");
@@ -85,7 +85,7 @@ gnl_urisource_class_init (GnlURISourceClass * klass)
   parent_class = g_type_class_ref (GNL_TYPE_OBJECT);
 
   GST_DEBUG_CATEGORY_INIT (gnlurisource, "gnlurisource",
-      GST_DEBUG_FG_BLUE | GST_DEBUG_BOLD, "GNonLin File Source Element");
+      GST_DEBUG_FG_BLUE | GST_DEBUG_BOLD, "GNonLin URI Source Element");
 
   gobject_class->set_property = GST_DEBUG_FUNCPTR (gnl_urisource_set_property);
   gobject_class->get_property = GST_DEBUG_FUNCPTR (gnl_urisource_get_property);
