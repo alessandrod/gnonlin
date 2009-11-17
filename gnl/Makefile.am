@@ -33,7 +33,6 @@ gnl_headers =			\
 
 DISTCLEANFILE = $(CLEANFILES)
 
-noinst_HEADERS = $(gnl_headers)
 #files built on make all/check/instal
 BUILT_SOURCES =			\
 	$(built_header_configure)	\
