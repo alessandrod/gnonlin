@@ -113,7 +113,7 @@ gnl_object_class_init (GnlObjectClass * klass)
    */
   g_object_class_install_property (gobject_class, ARG_START,
       g_param_spec_uint64 ("start", "Start",
-          "The start position relative to the parent",
+          "The start position relative to the parent (in nanoseconds)",
           0, G_MAXUINT64, 0, G_PARAM_READWRITE));
 
   /**
@@ -123,7 +123,8 @@ gnl_object_class_init (GnlObjectClass * klass)
    */
   g_object_class_install_property (gobject_class, ARG_DURATION,
       g_param_spec_int64 ("duration", "Duration",
-          "Outgoing duration", 0, G_MAXINT64, 0, G_PARAM_READWRITE));
+          "Outgoing duration (in nanoseconds)", 0, G_MAXINT64, 0,
+          G_PARAM_READWRITE));
 
   /**
    * GnlObject:stop
@@ -134,7 +135,7 @@ gnl_object_class_init (GnlObjectClass * klass)
    */
   g_object_class_install_property (gobject_class, ARG_STOP,
       g_param_spec_uint64 ("stop", "Stop",
-          "The stop position relative to the parent",
+          "The stop position relative to the parent (in nanoseconds)",
           0, G_MAXUINT64, 0, G_PARAM_READABLE));
 
   /**
@@ -147,7 +148,7 @@ gnl_object_class_init (GnlObjectClass * klass)
    */
   g_object_class_install_property (gobject_class, ARG_MEDIA_START,
       g_param_spec_uint64 ("media_start", "Media start",
-          "The media start position",
+          "The media start position (in nanoseconds)",
           0, G_MAXUINT64, GST_CLOCK_TIME_NONE, G_PARAM_READWRITE));
 
   /**
@@ -160,7 +161,7 @@ gnl_object_class_init (GnlObjectClass * klass)
    */
   g_object_class_install_property (gobject_class, ARG_MEDIA_DURATION,
       g_param_spec_int64 ("media_duration", "Media duration",
-          "Duration of the media, can be negative",
+          "Duration of the media (in nanoseconds), can be negative",
           G_MININT64, G_MAXINT64, 0, G_PARAM_READWRITE));
 
   /**
@@ -176,7 +177,7 @@ gnl_object_class_init (GnlObjectClass * klass)
    */
   g_object_class_install_property (gobject_class, ARG_MEDIA_STOP,
       g_param_spec_uint64 ("media_stop", "Media stop",
-          "The media stop position",
+          "The media stop position (in nanoseconds)",
           0, G_MAXUINT64, GST_CLOCK_TIME_NONE, G_PARAM_READABLE));
 
   /**
@@ -188,7 +189,7 @@ gnl_object_class_init (GnlObjectClass * klass)
    */
   g_object_class_install_property (gobject_class, ARG_RATE,
       g_param_spec_double ("rate", "Rate",
-          "Playback rate of the media",
+          "Playback rate of the media (1.0 : standard forward)",
           -G_MAXDOUBLE, G_MAXDOUBLE, 1.0, G_PARAM_READABLE));
 
   /**
