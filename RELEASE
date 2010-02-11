@@ -1,5 +1,5 @@
 
-Release notes for GNonLin Non-Linear Editing Plug-ins 0.10.13 "Service of Quality"
+Release notes for GNonLin Non-Linear Editing Plug-ins 0.10.14 "Slicing, Dicing and Chopping"
         
 
 
@@ -29,13 +29,12 @@ An element for using filters in a GnlComposition
 
 Features of this release
     
-      * Fix QoS event handling
-      * Fix racyness in source pad handlings
-      * GnlOperation: Add signal to know input stream priorities
+      * New gnlurisource element
+      * Documentation update
 
 Bugs fixed in this release
      
-      * 583145 : Seeking on pending pipelines should return True.
+      * 595570 : Add a GnlURISource
 
 Download
 
@@ -65,10 +64,10 @@ GNonLin is primarily used by PiTiVi (http://www.pitivi.org/) and Jokosher (http:
   
 Contributors to this release
     
-      * Adam Dingle
-      * Alessandro Decina
       * Edward Hervey
       * Jan Schmidt
-      * Olivier Crête
+      * Mark Nauwelaerts
+      * Sebastian Dröge
       * Stefan Kost
+      * Tim-Philipp Müller
  
