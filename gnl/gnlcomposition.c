@@ -1250,6 +1250,7 @@ convert_list_to_tree (GList ** stack, GstClockTime * start,
       if (limit)
         nbsinks--;
     }
+    *stack = tmp;
   }
 
 beach:
