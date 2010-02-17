@@ -32,3 +32,5 @@ check-torture:
 	true
 endif
 
+include $(top_srcdir)/common/coverage/lcov.mak
+
