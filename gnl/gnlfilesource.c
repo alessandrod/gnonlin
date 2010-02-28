@@ -116,7 +116,7 @@ gnl_filesource_set_location (GnlFileSource * fs, const gchar * location)
     tmp = g_strdup_printf ("file://%s", location);
   else
     tmp = g_strdup (location);
-  GST_DEBUG (tmp);
+  GST_DEBUG ("%s", tmp);
   g_object_set (fs, "uri", tmp, NULL);
   g_free (tmp);
 }
