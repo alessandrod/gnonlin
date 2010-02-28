@@ -2492,7 +2492,7 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
       GNL_OBJECT_IS_EXPANDABLE (element)) {
     /* It doesn't get added to objects_start and objects_stop. */
     comp->priv->expandables = g_list_prepend (comp->priv->expandables, element);
-    goto chiringuito;
+    goto check_update;
   }
 
   /* add it sorted to the objects list */
@@ -2528,8 +2528,11 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
       GST_TIME_ARGS (comp->priv->segment_start),
       GST_TIME_ARGS (comp->priv->segment_stop));
 
-  update_required = OBJECT_IN_ACTIVE_SEGMENT (comp, element)
-      || (!comp->priv->current);
+check_update:
+  update_required = OBJECT_IN_ACTIVE_SEGMENT (comp, element) ||
+      (!comp->priv->current) ||
+      (((GnlObject *) element)->priority == G_MAXUINT32) ||
+      GNL_OBJECT_IS_EXPANDABLE (element);
 
   /* We only need the current position if we're going to update */
   if (update_required && comp->priv->can_update)
