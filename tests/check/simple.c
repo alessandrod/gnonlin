@@ -369,7 +369,11 @@ test_one_under_another_full (gboolean async)
 
   /* Expected segments */
   collect->expected_segments = g_list_append (collect->expected_segments,
-      segment_new (1.0, GST_FORMAT_TIME, 0, 2 * GST_SECOND, 0));
+      segment_new (1.0, GST_FORMAT_TIME, 0, GST_SECOND, 0));
+
+  collect->expected_segments = g_list_append (collect->expected_segments,
+      segment_new (1.0, GST_FORMAT_TIME, GST_SECOND, 2 * GST_SECOND,
+          GST_SECOND));
 
   collect->expected_segments = g_list_append (collect->expected_segments,
       segment_new (1.0, GST_FORMAT_TIME,
