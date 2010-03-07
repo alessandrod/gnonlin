@@ -1286,6 +1286,7 @@ get_stack_list (GnlComposition * comp, GstClockTime timestamp,
   GNode *ret = NULL;
   GstClockTime nstart = GST_CLOCK_TIME_NONE;
   GstClockTime nstop = GST_CLOCK_TIME_NONE;
+  GstClockTime first_out_of_stack = GST_CLOCK_TIME_NONE;
   guint32 highest = 0;
 
   GST_DEBUG_OBJECT (comp,
@@ -1314,6 +1315,7 @@ get_stack_list (GnlComposition * comp, GstClockTime timestamp,
       }
     } else {
       GST_LOG_OBJECT (comp, "too far, stopping iteration");
+      first_out_of_stack = object->start;
       break;
     }
   }
@@ -1330,6 +1332,9 @@ get_stack_list (GnlComposition * comp, GstClockTime timestamp,
   /* convert that list to a stack */
   tmp = stack;
   ret = convert_list_to_tree (&tmp, &nstart, &nstop, &highest);
+  if (GST_CLOCK_TIME_IS_VALID (first_out_of_stack)
+      && nstop > first_out_of_stack)
+    nstop = first_out_of_stack;
 
   GST_DEBUG ("nstart:%" GST_TIME_FORMAT ", nstop:%" GST_TIME_FORMAT,
       GST_TIME_ARGS (nstart), GST_TIME_ARGS (nstop));
