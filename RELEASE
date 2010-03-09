@@ -1,5 +1,5 @@
 
-Release notes for GNonLin Non-Linear Editing Plug-ins 0.10.14 "Slicing, Dicing and Chopping"
+Release notes for GNonLin Non-Linear Editing Plug-ins 0.10.15 "I missed the snow in Barcelona"
         
 
 
@@ -29,12 +29,12 @@ An element for using filters in a GnlComposition
 
 Features of this release
     
-      * New gnlurisource element
-      * Documentation update
+      * Many fixes for complex compositions
 
 Bugs fixed in this release
      
-      * 595570 : Add a GnlURISource
+      * 609689 : compositions containing gnloperation videomixer/adder freeze when input is another gnloperation
+      * 609792 : [pitivi] [transitions] black frame flashing in rendered files when using transitions
 
 Download
 
@@ -64,10 +64,7 @@ GNonLin is primarily used by PiTiVi (http://www.pitivi.org/) and Jokosher (http:
   
 Contributors to this release
     
+      * Alessandro Decina
       * Edward Hervey
-      * Jan Schmidt
-      * Mark Nauwelaerts
       * Sebastian Dröge
-      * Stefan Kost
-      * Tim-Philipp Müller
  

@@ -1,9 +1,92 @@
-=== release 0.10.14 ===
+=== release 0.10.15 ===
 
-2010-02-11  Edward Hervey <bilboed@bilboed.com>
+2010-03-09  Edward Hervey <bilboed@bilboed.com>
 
 	* configure.ac:
-	  releasing 0.10.14, "Slicing, Dicing and Chopping"
+	  releasing 0.10.15, "I missed the snow in Barcelona"
+
+2010-03-07 19:23:46 +0100  Edward Hervey <bilboed@bilboed.com>
+
+	* tests/check/simple.c:
+	  tests: Adjust simple test for slight behaviour change introduced in last commit
+
+2010-03-07 19:24:17 +0100  Edward Hervey <bilboed@bilboed.com>
+
+	* tests/check/gnloperation.c:
+	  tests: Add a new test for checking fix introduce by last commit.
+
+2010-03-07 19:12:07 +0100  Alessandro Decina <alessandro.d@gmail.com>
+
+	* gnl/gnlcomposition.c:
+	  gnlcomposition: fix a bug figuring out the segments.
+	  If we have two sources (with no default sources) laid out like this:
+	  [  source1         ]
+	  [   source2   ]
+	  We need to configure 3 different segments and therefore build 3 different
+	  stacks. One in which only source1 is active, one in which both source1 and
+	  source2 are active and finally one in which only source2 is active.
+	  https://bugzilla.gnome.org/show_bug.cgi?id=609792
+
+2010-02-28 20:03:17 +0100  Alessandro Decina <alessandro.d@gmail.com>
+
+	* gnl/gnlcomposition.c:
+	  composition: call update_pipeline when an expandable source is added.
+
+2010-02-28 20:02:32 +0100  Alessandro Decina <alessandro.d@gmail.com>
+
+	* gnl/gnlfilesource.c:
+	  Fix a compiler warning in OSX.
+
+2010-02-26 16:41:54 +0100  Sebastian Dröge <sebastian.droege@collabora.co.uk>
+
+	* gnl/Makefile.am:
+	  build: Make some more rules silent if requested
+
+2010-02-26 15:50:51 +0100  Sebastian Dröge <sebastian.droege@collabora.co.uk>
+
+	* configure.ac:
+	  configure: Use automake 1.11 silent rules instead of shave if available
+	  This makes sure that we use something that is still maintained and
+	  also brings back libtool 1.5 support.
+
+2010-02-17 10:01:03 +0100  Sebastian Dröge <sebastian.droege@collabora.co.uk>
+
+	* configure.ac:
+	  Don't check for check, gst-check already includes it
+
+2010-02-17 09:48:08 +0100  Sebastian Dröge <sebastian.droege@collabora.co.uk>
+
+	* Makefile.am:
+	  Include lcov.mak to allow unit test coverage report generation
+
+2010-02-14 23:19:25 +0100  Sebastian Dröge <sebastian.droege@collabora.co.uk>
+
+	* common:
+	  Automatic update of common submodule
+	  From 96dc793 to 44ecce7
+
+2010-02-12 18:19:13 +0100  Edward Hervey <bilboed@bilboed.com>
+
+	* gnl/gnlcomposition.c:
+	  gnlcomposition: Don't forget to carry over the modifyed stack
+	  This can happen when we have several operations stacked one over each
+	  other.
+	  Fixes #609689
+
+2010-02-12 11:37:24 +0100  Edward Hervey <bilboed@bilboed.com>
+
+	* configure.ac:
+	  configure.ac: And back to development we go
+
+=== release 0.10.14 ===
+
+2010-02-11 13:55:52 +0100  Edward Hervey <bilboed@bilboed.com>
+
+	* ChangeLog:
+	* NEWS:
+	* RELEASE:
+	* configure.ac:
+	  Releasing 0.10.14, "Slicing, Dicing and Chopping"
 
 2010-01-30 15:20:36 +0000  Tim-Philipp Müller <tim.muller@collabora.co.uk>
 
@@ -158,8 +241,6 @@
 	  gnlfilesource: If we use uridecodebin get the location from there
 	  This prevents assertions that result from getting the property value
 	  from the internal filesrc, which is NULL if we use uridecodebin.
-
-=== release 0.10.13 ===
 
 2009-09-07 11:51:36 +0200  Edward Hervey <bilboed@bilboed.com>
 
