@@ -34,12 +34,6 @@
 
 GST_BOILERPLATE (GnlComposition, gnl_composition, GnlObject, GNL_TYPE_OBJECT);
 
-static GstElementDetails gnl_composition_details =
-GST_ELEMENT_DETAILS ("GNonLin Composition",
-    "Filter/Editor",
-    "Combines GNL objects",
-    "Wim Taymans <wim.taymans@gmail.com>, Edward Hervey <bilboed@bilboed.com>");
-
 static GstStaticPadTemplate gnl_composition_src_template =
 GST_STATIC_PAD_TEMPLATE ("src",
     GST_PAD_SRC,
@@ -232,7 +226,10 @@ gnl_composition_base_init (gpointer g_class)
 {
   GstElementClass *gstclass = GST_ELEMENT_CLASS (g_class);
 
-  gst_element_class_set_details (gstclass, &gnl_composition_details);
+  gst_element_class_set_details_simple (gstclass, "GNonLin Composition",
+      "Filter/Editor",
+      "Combines GNL objects",
+      "Wim Taymans <wim.taymans@gmail.com>, Edward Hervey <bilboed@bilboed.com>");
 }
 
 static void

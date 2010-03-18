@@ -41,12 +41,6 @@
 
 GST_BOILERPLATE (GnlOperation, gnl_operation, GnlObject, GNL_TYPE_OBJECT);
 
-static GstElementDetails gnl_operation_details =
-GST_ELEMENT_DETAILS ("GNonLin Operation",
-    "Filter/Editor",
-    "Encapsulates filters/effects for use with GNL Objects",
-    "Wim Taymans <wim.taymans@gmail.com>, Edward Hervey <bilboed@bilboed.com>");
-
 static GstStaticPadTemplate gnl_operation_src_template =
 GST_STATIC_PAD_TEMPLATE ("src",
     GST_PAD_SRC,
@@ -100,7 +94,10 @@ gnl_operation_base_init (gpointer g_class)
 {
   GstElementClass *gstclass = GST_ELEMENT_CLASS (g_class);
 
-  gst_element_class_set_details (gstclass, &gnl_operation_details);
+  gst_element_class_set_details_simple (gstclass, "GNonLin Operation",
+      "Filter/Editor",
+      "Encapsulates filters/effects for use with GNL Objects",
+      "Wim Taymans <wim.taymans@gmail.com>, Edward Hervey <bilboed@bilboed.com>");
 }
 
 static void

@@ -46,12 +46,6 @@ GST_DEBUG_CATEGORY_STATIC (gnlurisource);
 
 GST_BOILERPLATE (GnlURISource, gnl_urisource, GnlSource, GNL_TYPE_SOURCE);
 
-static GstElementDetails gnl_urisource_details = GST_ELEMENT_DETAILS
-    ("GNonLin URI Source",
-    "Filter/Editor",
-    "High-level URI Source element",
-    "Edward Hervey <bilboed@bilboed.com>");
-
 enum
 {
   ARG_0,
@@ -73,7 +67,9 @@ gnl_urisource_base_init (gpointer g_class)
 {
   GstElementClass *gstclass = GST_ELEMENT_CLASS (g_class);
 
-  gst_element_class_set_details (gstclass, &gnl_urisource_details);
+  gst_element_class_set_details_simple (gstclass, "GNonLin URI Source",
+      "Filter/Editor",
+      "High-level URI Source element", "Edward Hervey <bilboed@bilboed.com>");
 }
 
 static void

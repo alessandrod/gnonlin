@@ -46,12 +46,6 @@ GST_DEBUG_CATEGORY_STATIC (gnlfilesource);
 GST_BOILERPLATE (GnlFileSource, gnl_filesource, GnlURISource,
     GNL_TYPE_URI_SOURCE);
 
-static GstElementDetails gnl_filesource_details = GST_ELEMENT_DETAILS
-    ("GNonLin File Source",
-    "Filter/Editor",
-    "High-level File Source element",
-    "Edward Hervey <bilboed@bilboed.com>");
-
 enum
 {
   ARG_0,
@@ -71,7 +65,9 @@ gnl_filesource_base_init (gpointer g_class)
 {
   GstElementClass *gstclass = GST_ELEMENT_CLASS (g_class);
 
-  gst_element_class_set_details (gstclass, &gnl_filesource_details);
+  gst_element_class_set_details_simple (gstclass, "GNonLin File Source",
+      "Filter/Editor",
+      "High-level File Source element", "Edward Hervey <bilboed@bilboed.com>");
 }
 
 static void

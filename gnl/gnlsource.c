@@ -44,12 +44,6 @@ GST_DEBUG_CATEGORY_STATIC (gnlsource);
 
 GST_BOILERPLATE (GnlSource, gnl_source, GnlObject, GNL_TYPE_OBJECT);
 
-static GstElementDetails gnl_source_details = GST_ELEMENT_DETAILS
-    ("GNonLin Source",
-    "Filter/Editor",
-    "Manages source elements",
-    "Wim Taymans <wim.taymans@gmail.com>, Edward Hervey <bilboed@bilboed.com>");
-
 struct _GnlSourcePrivate
 {
   gboolean dispose_has_run;
@@ -90,7 +84,10 @@ gnl_source_base_init (gpointer g_class)
 {
   GstElementClass *gstclass = GST_ELEMENT_CLASS (g_class);
 
-  gst_element_class_set_details (gstclass, &gnl_source_details);
+  gst_element_class_set_details_simple (gstclass, "GNonLin Source",
+      "Filter/Editor",
+      "Manages source elements",
+      "Wim Taymans <wim.taymans@gmail.com>, Edward Hervey <bilboed@bilboed.com>");
 }
 
 static void
