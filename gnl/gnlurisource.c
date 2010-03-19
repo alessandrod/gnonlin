@@ -58,6 +58,8 @@ enum
   ARG_URI,
 };
 
+static gboolean gnl_urisource_prepare (GnlObject * object);
+
 static void
 gnl_urisource_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
@@ -78,11 +80,13 @@ static void
 gnl_urisource_class_init (GnlURISourceClass * klass)
 {
   GObjectClass *gobject_class;
+  GnlObjectClass *gnlobject_class;
   GstElementClass *gstelement_class;
 
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
-  parent_class = g_type_class_ref (GNL_TYPE_OBJECT);
+  gnlobject_class = (GnlObjectClass *) klass;
+  parent_class = g_type_class_ref (GNL_TYPE_SOURCE);
 
   GST_DEBUG_CATEGORY_INIT (gnlurisource, "gnlurisource",
       GST_DEBUG_FG_BLUE | GST_DEBUG_BOLD, "GNonLin URI Source Element");
@@ -96,6 +100,8 @@ gnl_urisource_class_init (GnlURISourceClass * klass)
 
   gst_element_class_add_pad_template (gstelement_class,
       gst_static_pad_template_get (&gnl_urisource_src_template));
+
+  gnlobject_class->prepare = gnl_urisource_prepare;
 }
 
 static void
@@ -151,4 +157,21 @@ gnl_urisource_get_property (GObject * object, guint prop_id,
       break;
   }
 
+}
+
+static gboolean
+gnl_urisource_prepare (GnlObject * object)
+{
+  GnlSource *fs = (GnlSource *) object;
+
+  GST_DEBUG ("prepare");
+
+  /* Set the caps on uridecodebin */
+  if (!gst_caps_is_any (object->caps)) {
+    GST_DEBUG_OBJECT (object, "Setting uridecodebin caps to %" GST_PTR_FORMAT,
+        object->caps);
+    g_object_set (fs->element, "caps", object->caps, NULL);
+  }
+
+  return GNL_OBJECT_CLASS (parent_class)->prepare (object);
 }
