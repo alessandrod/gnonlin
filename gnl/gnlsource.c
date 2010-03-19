@@ -62,6 +62,7 @@ struct _GnlSourcePrivate
   gulong padaddedid;            /* signal handler for element pad-added signal */
 
   gboolean pendingblock;        /* We have a pending pad_block */
+  gboolean areblocked;          /* We already got blocked */
   GstPad *ghostedpad;           /* Pad (to be) ghosted */
 };
 
@@ -256,6 +257,7 @@ element_pad_removed_cb (GstElement * element G_GNUC_UNUSED, GstPad * pad,
     if (source->priv->ghostpad) {
       GST_DEBUG_OBJECT (source, "Clearing up ghostpad");
 
+      source->priv->areblocked = FALSE;
       gst_pad_set_blocked_async (pad, FALSE,
           (GstPadBlockCallback) pad_blocked_cb, source);
 
@@ -336,6 +338,7 @@ ghost_seek_pad (GnlSource * source)
   }
 
   GST_DEBUG_OBJECT (source, "about to unblock %s:%s", GST_DEBUG_PAD_NAME (pad));
+  source->priv->areblocked = FALSE;
   gst_pad_set_blocked_async (pad, FALSE,
       (GstPadBlockCallback) pad_blocked_cb, source);
   gst_element_no_more_pads (GST_ELEMENT (source));
@@ -352,9 +355,9 @@ pad_blocked_cb (GstPad * pad, gboolean blocked, GnlSource * source)
   GST_DEBUG_OBJECT (source, "blocked:%d pad:%s:%s",
       blocked, GST_DEBUG_PAD_NAME (pad));
 
-  if (!(source->priv->ghostpad)) {
-    if (blocked)
-      g_thread_create ((GThreadFunc) ghost_seek_pad, source, FALSE, NULL);
+  if (blocked && !(source->priv->ghostpad) && !(source->priv->areblocked)) {
+    source->priv->areblocked = TRUE;
+    g_thread_create ((GThreadFunc) ghost_seek_pad, source, FALSE, NULL);
   }
 }
 
@@ -580,6 +583,7 @@ gnl_source_change_state (GstElement * element, GstStateChange transition)
             source->priv->ghostpad);
         source->priv->ghostpad = NULL;
         source->priv->ghostedpad = NULL;
+        source->priv->areblocked = FALSE;
         source->priv->pendingblock = FALSE;
       }
     default:
