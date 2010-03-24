@@ -16,7 +16,7 @@ dnl define PACKAGE_VERSION_* variables
 AS_VERSION
 
 dnl check if this is a release version
-AS_NANO(GST_CVS="no", GST_CVS="yes")
+AS_NANO(GST_GIT="no", GST_GIT="yes")
 
 dnl can autoconf find the source ?
 AC_CONFIG_SRCDIR([gnl/gnl.c])
@@ -146,10 +146,14 @@ dnl set location of plugin directory
 AG_GST_SET_PLUGINDIR
 
 dnl define an ERROR_CFLAGS Makefile variable
-AG_GST_SET_ERROR_CFLAGS($GST_CVS)
+AG_GST_SET_ERROR_CFLAGS($GST_GIT, [-Wmissing-declarations -Wmissing-prototypes 
+   -Wredundant-decls -Wundef -Wwrite-strings -Wformat-nonliteral
+   -Wformat-security -Wold-style-definition -Wcast-align -Winit-self
+   -Wmissing-include-dirs -Waddress -Waggregate-return -Wno-multichar
+   -Wnested-externs])
 
 dnl define correct level for debugging messages
-AG_GST_SET_LEVEL_DEFAULT($GST_CVS)
+AG_GST_SET_LEVEL_DEFAULT($GST_GIT)
 
 dnl used in examples
 AG_GST_DEFAULT_ELEMENTS
@@ -170,7 +174,7 @@ if test "x$USE_DEBUG" = xyes; then
 fi
 AC_SUBST(PROFILE_CFLAGS)
 
-if test "x$GST_CVS" = "xyes"; then
+if test "x$GST_GIT" = "xyes"; then
   DEPRECATED_CFLAGS="-DGST_DISABLE_DEPRECATED"
 else
   DEPRECATED_CFLAGS=""

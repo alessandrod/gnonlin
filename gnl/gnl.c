@@ -26,7 +26,7 @@
 
 struct _elements_entry
 {
-  gchar *name;
+  const gchar *name;
     GType (*type) (void);
 };
 

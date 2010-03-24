@@ -767,7 +767,7 @@ gnl_object_ghost_pad_set_target (GnlObject * object, GstPad * ghost,
 }
 
 void
-gnl_init_ghostpad_category ()
+gnl_init_ghostpad_category (void)
 {
   GST_DEBUG_CATEGORY_INIT (gnlghostpad, "gnlghostpad",
       GST_DEBUG_FG_BLUE | GST_DEBUG_BOLD, "GNonLin GhostPad");
