@@ -448,7 +448,7 @@ gnl_object_cleanup (GnlObject * object)
   return ret;
 }
 
-static void
+void
 gnl_object_set_caps (GnlObject * object, const GstCaps * caps)
 {
   if (object->caps)

@@ -125,5 +125,8 @@ gboolean
 gnl_media_to_object_time (GnlObject * object, GstClockTime mtime,
 			  GstClockTime * otime);
 
+void
+gnl_object_set_caps (GnlObject * object, const GstCaps * caps);
+
 G_END_DECLS
 #endif /* __GNL_OBJECT_H__ */
