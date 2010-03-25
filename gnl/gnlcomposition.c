@@ -1476,6 +1476,15 @@ get_src_pad (GstElement * element)
  *
  */
 
+static gboolean
+set_child_caps (GstElement * child, GValue * ret G_GNUC_UNUSED,
+    GnlObject * comp)
+{
+  gnl_object_set_caps ((GnlObject *) child, comp->caps);
+  return TRUE;
+}
+
+
 static GstStateChangeReturn
 gnl_composition_change_state (GstElement * element, GstStateChange transition)
 {
@@ -1483,34 +1492,51 @@ gnl_composition_change_state (GstElement * element, GstStateChange transition)
   GstStateChangeReturn ret = GST_STATE_CHANGE_SUCCESS;
 
   switch (transition) {
-    case GST_STATE_CHANGE_READY_TO_PAUSED:{
+    case GST_STATE_CHANGE_READY_TO_PAUSED:
+    {
       GstIterator *childs;
 
       gnl_composition_reset (comp);
+
       /* state-lock all elements */
       GST_DEBUG_OBJECT (comp,
           "Setting all childs to READY and locking their state");
       childs = gst_bin_iterate_elements (GST_BIN (comp));
-    retry:
+    retry_lock:
       if (G_UNLIKELY (gst_iterator_fold (childs,
                   (GstIteratorFoldFunction) lock_child_state, NULL,
                   NULL) == GST_ITERATOR_RESYNC)) {
         gst_iterator_resync (childs);
-        goto retry;
+        goto retry_lock;
       }
       gst_iterator_free (childs);
-    }
+
+      /* Set caps on all objects */
+      if (G_UNLIKELY (!gst_caps_is_any (GNL_OBJECT (comp)->caps))) {
+        childs = gst_bin_iterate_elements (GST_BIN (comp));
+      retry_caps:
+        if (G_UNLIKELY (gst_iterator_fold (childs,
+                    (GstIteratorFoldFunction) set_child_caps, NULL,
+                    comp) == GST_ITERATOR_RESYNC)) {
+          gst_iterator_resync (childs);
+          goto retry_caps;
+        }
+        gst_iterator_free (childs);
+      }
 
       /* set ghostpad target */
       if (!(update_pipeline (comp, COMP_REAL_START (comp), TRUE, FALSE, TRUE))) {
         ret = GST_STATE_CHANGE_FAILURE;
         goto beach;
       }
+    }
       break;
+
     case GST_STATE_CHANGE_PAUSED_TO_READY:
     case GST_STATE_CHANGE_READY_TO_NULL:
       gnl_composition_reset (comp);
       break;
+
     default:
       break;
   }
@@ -2488,6 +2514,10 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
 
   /* ...and add it to the hash table */
   g_hash_table_insert (comp->priv->objects_hash, element, entry);
+
+  /* Set the caps of the composition */
+  if (G_UNLIKELY (!gst_caps_is_any (((GnlObject *) comp)->caps)))
+    gnl_object_set_caps ((GnlObject *) element, ((GnlObject *) comp)->caps);
 
   /* Special case for default source. */
   if ((((GnlObject *) element)->priority == G_MAXUINT32) ||
