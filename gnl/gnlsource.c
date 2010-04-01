@@ -542,7 +542,7 @@ gnl_source_change_state (GstElement * element, GstStateChange transition)
         /* Do an async block on valid source pad */
 
         if (!(get_valid_src_pad (source, source->element, &pad))) {
-          GST_WARNING_OBJECT (source, "Couldn't find a valid source pad");
+          GST_DEBUG_OBJECT (source, "Couldn't find a valid source pad");
         } else {
           GST_LOG_OBJECT (source, "Trying to async block source pad %s:%s",
               GST_DEBUG_PAD_NAME (pad));
