@@ -142,7 +142,7 @@ videotest_gnl_src (const gchar * name, guint64 start, gint64 duration,
 {
   GstElement * gnlsource = NULL;
   GstElement * videotestsrc = NULL;
-  GstCaps * caps = gst_caps_from_string ("video/x-raw-yuv,format=(fourcc)I420");
+  GstCaps * caps = gst_caps_from_string ("video/x-raw-yuv,format=(fourcc)I420,framerate=(fraction)3/2");
 
   fail_if (caps == NULL);
 
