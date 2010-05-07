@@ -111,6 +111,7 @@ gnl_urisource_init (GnlURISource * urisource,
   /* We create a bin with source and decodebin within */
   decodebin =
       gst_element_factory_make ("uridecodebin", "internal-uridecodebin");
+  g_object_set (decodebin, "expose-all-streams", FALSE, NULL);
 
   gst_bin_add (GST_BIN (urisource), decodebin);
 }
