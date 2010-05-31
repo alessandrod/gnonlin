@@ -2250,8 +2250,6 @@ update_pipeline (GnlComposition * comp, GstClockTime currenttime,
 
       /* state-lock elements no more used */
       for (tmp = deactivate; tmp; tmp = g_list_next (tmp)) {
-        GST_LOG ("%p", tmp->data);
-
         if (change_state)
           gst_element_set_state (GST_ELEMENT (tmp->data), state);
         gst_element_set_locked_state (GST_ELEMENT (tmp->data), TRUE);
