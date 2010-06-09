@@ -70,7 +70,7 @@ enum
 
 static guint gnl_operation_signals[LAST_SIGNAL] = { 0 };
 
-static void gnl_operation_finalize (GObject * object);
+static void gnl_operation_dispose (GObject * object);
 
 static void gnl_operation_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
@@ -112,7 +112,7 @@ gnl_operation_class_init (GnlOperationClass * klass)
   GST_DEBUG_CATEGORY_INIT (gnloperation, "gnloperation",
       GST_DEBUG_FG_BLUE | GST_DEBUG_BOLD, "GNonLin Operation element");
 
-  gobject_class->finalize = GST_DEBUG_FUNCPTR (gnl_operation_finalize);
+  gobject_class->dispose = GST_DEBUG_FUNCPTR (gnl_operation_dispose);
 
   gobject_class->set_property = GST_DEBUG_FUNCPTR (gnl_operation_set_property);
   gobject_class->get_property = GST_DEBUG_FUNCPTR (gnl_operation_get_property);
@@ -162,13 +162,24 @@ gnl_operation_class_init (GnlOperationClass * klass)
 }
 
 static void
-gnl_operation_finalize (GObject * object)
+gnl_operation_dispose (GObject * object)
 {
   GnlOperation *oper = (GnlOperation *) object;
+  GList *tmp;
+
+  if (oper->ghostpad) {
+    gnl_object_remove_ghost_pad (GNL_OBJECT (oper), oper->ghostpad);
+    oper->ghostpad = NULL;
+  }
+
+  for (tmp = oper->sinks; tmp; tmp = tmp->next) {
+    GstPad *ghost = (GstPad *) tmp->data;
+    gnl_object_remove_ghost_pad (GNL_OBJECT (oper), ghost);
+  }
 
   g_list_free (oper->sinks);
 
-  G_OBJECT_CLASS (parent_class)->finalize (object);
+  G_OBJECT_CLASS (parent_class)->dispose (object);
 }
 
 static void
