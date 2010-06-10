@@ -88,6 +88,7 @@ static GstPad *gnl_operation_request_new_pad (GstElement * element,
 static void gnl_operation_release_pad (GstElement * element, GstPad * pad);
 
 static void synchronize_sinks (GnlOperation * operation);
+static gboolean remove_sink_pad (GnlOperation * operation, GstPad * sinkpad);
 
 static void
 gnl_operation_base_init (gpointer g_class)
@@ -165,20 +166,20 @@ static void
 gnl_operation_dispose (GObject * object)
 {
   GnlOperation *oper = (GnlOperation *) object;
-  GList *tmp;
 
+  GST_DEBUG_OBJECT (object, "Disposing of source pad");
   if (oper->ghostpad) {
     gnl_object_remove_ghost_pad (GNL_OBJECT (oper), oper->ghostpad);
     oper->ghostpad = NULL;
   }
 
-  for (tmp = oper->sinks; tmp; tmp = tmp->next) {
-    GstPad *ghost = (GstPad *) tmp->data;
-    gnl_object_remove_ghost_pad (GNL_OBJECT (oper), ghost);
+  GST_DEBUG_OBJECT (object, "Disposing of sink pad(s)");
+  while (oper->sinks) {
+    GstPad *ghost = (GstPad *) oper->sinks->data;
+    remove_sink_pad (oper, ghost);
   }
 
-  g_list_free (oper->sinks);
-
+  GST_DEBUG_OBJECT (object, "Done, calling parent class ::dispose()");
   G_OBJECT_CLASS (parent_class)->dispose (object);
 }
 
@@ -317,8 +318,11 @@ get_nb_static_sinks (GnlOperation * oper)
 
   while (!done) {
     switch (gst_iterator_next (sinkpads, &val)) {
-      case GST_ITERATOR_OK:
+      case GST_ITERATOR_OK:{
+        GstPad *pad = (GstPad *) val;
         nbsinks++;
+        gst_object_unref (pad);
+      }
         break;
       case GST_ITERATOR_RESYNC:
         nbsinks = 0;
@@ -374,6 +378,9 @@ gnl_operation_add_element (GstBin * bin, GstElement * element)
           operation->ghostpad =
               gnl_object_ghost_pad_full (GNL_OBJECT (operation),
               GST_PAD_NAME (srcpad), srcpad, TRUE);
+
+        /* Remove the reference get_src_pad gave us */
+        gst_object_unref (srcpad);
 
         /* Figure out number of static sink pads */
         operation->num_sinks = get_nb_static_sinks (operation);
@@ -546,8 +553,10 @@ get_unlinked_sink_ghost_pad (GnlOperation * operation)
         if (peer == NULL) {
           ret = pad;
           done = TRUE;
-        } else
-          gst_object_unref ((GstObject *) pad);
+        } else {
+          gst_object_unref (peer);
+          gst_object_unref (pad);
+        }
         break;
       }
       case GST_ITERATOR_RESYNC:
@@ -680,6 +689,7 @@ remove_sink_pad (GnlOperation * operation, GstPad * sinkpad)
     gst_element_release_request_pad (operation->element, target);
     operation->sinks = g_list_remove (operation->sinks, sinkpad);
     gnl_object_remove_ghost_pad ((GnlObject *) operation, sinkpad);
+    gst_object_unref (target);
     operation->realsinks--;
   }
 
