@@ -90,13 +90,16 @@ GST_START_TEST (test_simple_videotestsrc)
   GST_DEBUG ("Setting pipeline to NULL");
 
   fail_if (gst_element_set_state (GST_ELEMENT (pipeline),
-          GST_STATE_READY) == GST_STATE_CHANGE_FAILURE);
+          GST_STATE_NULL) == GST_STATE_CHANGE_FAILURE);
 
   fail_if (collect->expected_segments != NULL);
 
   gst_object_unref (GST_OBJECT (sinkpad));
 
-  GST_DEBUG ("Resetted pipeline to READY");
+  GST_DEBUG ("Resetted pipeline to NULL");
+
+  gst_object_unref (pipeline);
+  gst_object_unref (bus);
 
   g_free (collect);
 }
@@ -194,11 +197,14 @@ GST_START_TEST (test_videotestsrc_in_bin)
   gst_object_unref (GST_OBJECT (sinkpad));
 
   fail_if (gst_element_set_state (GST_ELEMENT (pipeline),
-          GST_STATE_READY) == GST_STATE_CHANGE_FAILURE);
+          GST_STATE_NULL) == GST_STATE_CHANGE_FAILURE);
 
   fail_if (collect->expected_segments != NULL);
 
-  GST_DEBUG ("Resetted pipeline to READY");
+  GST_DEBUG ("Resetted pipeline to NULL");
+
+  gst_object_unref (pipeline);
+  gst_object_unref (bus);
 
   g_free (collect);
 }
@@ -214,7 +220,8 @@ gnonlin_suite (void)
 
   suite_add_tcase (s, tc_chain);
 
-  tcase_add_test (tc_chain, test_simple_videotestsrc);
+  if (0)
+    tcase_add_test (tc_chain, test_simple_videotestsrc);
   tcase_add_test (tc_chain, test_videotestsrc_in_bin);
 
   return s;

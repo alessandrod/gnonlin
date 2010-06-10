@@ -44,6 +44,7 @@ on_composition_pad_added_cb (GstElement * composition, GstPad * pad,
   GstPad *s = gst_element_get_pad (sink, "sink");
   gst_pad_link (pad, s);
   ++composition_pad_added;
+  gst_object_unref (s);
 }
 
 static void
