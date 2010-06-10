@@ -620,6 +620,9 @@ control_internal_pad (GstPad * ghostpad, GnlObject * object)
   priv->ghostpriv = privghost;
   priv->dir = GST_PAD_DIRECTION (ghostpad);
   gst_object_unref (internal);
+
+  GST_DEBUG_OBJECT (ghostpad, "Done with pad %s:%s",
+      GST_DEBUG_PAD_NAME (target));
 }
 
 
