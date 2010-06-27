@@ -49,7 +49,8 @@ gst_element_factory_make_or_warn (const gchar * factoryname, const gchar * name)
 static void
 composition_pad_added_cb (GstElement *composition, GstPad *pad, CollectStructure * collect)
 {
-  fail_if (!(gst_element_link (composition, collect->sink)));
+  fail_if (!(gst_element_link_pads_full (composition, GST_OBJECT_NAME (pad), collect->sink, "sink",
+					 GST_PAD_LINK_CHECK_NOTHING)));
 }
 
 /* return TRUE to discard the Segment */
@@ -198,7 +199,8 @@ videotest_in_bin_gnl_src (const gchar * name, guint64 start, gint64 duration, gi
   gst_bin_add (GST_BIN (bin), videotestsrc);
   gst_bin_add (GST_BIN (bin), alpha);
 
-  gst_element_link (videotestsrc, alpha);
+  gst_element_link_pads_full (videotestsrc, "src", alpha, "sink",
+			      GST_PAD_LINK_CHECK_NOTHING);
 
   gst_bin_add (GST_BIN (gnlsource), bin);
   
@@ -235,7 +237,8 @@ audiotest_bin_src (const gchar * name, guint64 start,
     caps = gst_caps_from_string ("audio/x-raw-float");
 
   gst_bin_add_many (GST_BIN (bin), audiotestsrc, audioconvert, identity, NULL);
-  gst_element_link (audiotestsrc, audioconvert);
+  gst_element_link_pads_full (audiotestsrc, "src", audioconvert, "sink",
+			      GST_PAD_LINK_CHECK_NOTHING);
   fail_if ((gst_element_link_filtered (audioconvert, identity, caps)) != TRUE);
 
   gst_caps_unref (caps);
