@@ -1708,7 +1708,8 @@ no_more_pads_object_cb (GstElement * element, GnlComposition * comp)
       }
 
       /* Link pad to parent sink pad */
-      if (G_UNLIKELY (gst_pad_link (pad, sinkpad) != GST_PAD_LINK_OK)) {
+      if (G_UNLIKELY (gst_pad_link_full (pad, sinkpad,
+                  GST_PAD_LINK_CHECK_NOTHING) != GST_PAD_LINK_OK)) {
         GST_WARNING_OBJECT (comp, "Failed to link pads, error:");
         gst_object_unref (sinkpad);
         goto done;
