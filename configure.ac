@@ -1,4 +1,4 @@
-AC_PREREQ(2.52)
+AC_PREREQ(2.60)
 
 dnl initialize autoconf
 dnl when going to/from release please set the nano (fourth number) right !
@@ -10,7 +10,7 @@ AC_INIT(GNonLin, 0.10.15.1,
 AG_GST_INIT
 
 dnl initialize automake
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([-Wno-portability 1.10])
 
 dnl define PACKAGE_VERSION_* variables
 AS_VERSION
