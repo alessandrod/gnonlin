@@ -1863,7 +1863,8 @@ compare_relink_single_node (GnlComposition * comp, GNode * node,
           GST_WARNING_OBJECT (comp, "Couldn't find an unlinked sinkpad from %s",
               GST_ELEMENT_NAME (newparent));
         } else {
-          if (G_UNLIKELY (gst_pad_link (srcpad, sinkpad) != GST_PAD_LINK_OK)) {
+          if (G_UNLIKELY (gst_pad_link_full (srcpad, sinkpad,
+                      GST_PAD_LINK_CHECK_NOTHING) != GST_PAD_LINK_OK)) {
             GST_WARNING_OBJECT (comp, "Failed to link pads");
           }
           gst_object_unref (sinkpad);
