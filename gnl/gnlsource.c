@@ -58,6 +58,7 @@ struct _GnlSourcePrivate
   gboolean pendingblock;        /* We have a pending pad_block */
   gboolean areblocked;          /* We already got blocked */
   GstPad *ghostedpad;           /* Pad (to be) ghosted */
+  GstPad *staticpad;            /* The only pad. We keep an extra ref */
 };
 
 static gboolean gnl_source_prepare (GnlObject * object);
@@ -164,6 +165,11 @@ gnl_source_dispose (GObject * object)
   if (source->priv->ghostpad)
     gnl_object_remove_ghost_pad ((GnlObject *) object, source->priv->ghostpad);
   source->priv->ghostpad = NULL;
+
+  if (source->priv->staticpad) {
+    gst_object_unref (source->priv->staticpad);
+    source->priv->staticpad = NULL;
+  }
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
 }
@@ -403,7 +409,7 @@ gnl_source_control_element_func (GnlSource * source, GstElement * element)
   gst_object_ref (element);
 
   if (get_valid_src_pad (source, source->element, &pad)) {
-    gst_object_unref (pad);
+    source->priv->staticpad = pad;
     GST_DEBUG_OBJECT (source,
         "There is a valid source pad, we consider the object as NOT having dynamic pads");
     source->priv->dynamicpads = FALSE;
@@ -541,9 +547,12 @@ gnl_source_change_state (GstElement * element, GstStateChange transition)
 
         /* Do an async block on valid source pad */
 
-        if (!(get_valid_src_pad (source, source->element, &pad))) {
+        if (!source->priv->staticpad
+            && !(get_valid_src_pad (source, source->element, &pad))) {
           GST_DEBUG_OBJECT (source, "Couldn't find a valid source pad");
         } else {
+          if (source->priv->staticpad)
+            pad = gst_object_ref (source->priv->staticpad);
           GST_LOG_OBJECT (source, "Trying to async block source pad %s:%s",
               GST_DEBUG_PAD_NAME (pad));
           source->priv->ghostedpad = pad;
