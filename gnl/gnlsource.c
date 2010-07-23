@@ -68,7 +68,6 @@ static gboolean gnl_source_add_element (GstBin * bin, GstElement * element);
 static gboolean gnl_source_remove_element (GstBin * bin, GstElement * element);
 
 static void gnl_source_dispose (GObject * object);
-static void gnl_source_finalize (GObject * object);
 
 static gboolean gnl_source_send_event (GstElement * element, GstEvent * event);
 
@@ -104,6 +103,8 @@ gnl_source_class_init (GnlSourceClass * klass)
   gstbin_class = (GstBinClass *) klass;
   gnlobject_class = (GnlObjectClass *) klass;
 
+  g_type_class_add_private (klass, sizeof (GnlSourcePrivate));
+
   parent_class = g_type_class_ref (GNL_TYPE_OBJECT);
 
   GST_DEBUG_CATEGORY_INIT (gnlsource, "gnlsource",
@@ -121,7 +122,6 @@ gnl_source_class_init (GnlSourceClass * klass)
   gstelement_class->change_state = GST_DEBUG_FUNCPTR (gnl_source_change_state);
 
   gobject_class->dispose = GST_DEBUG_FUNCPTR (gnl_source_dispose);
-  gobject_class->finalize = GST_DEBUG_FUNCPTR (gnl_source_finalize);
 
   gst_element_class_add_pad_template (gstelement_class,
       gst_static_pad_template_get (&gnl_source_src_template));
@@ -134,7 +134,8 @@ gnl_source_init (GnlSource * source, GnlSourceClass * klass G_GNUC_UNUSED)
 {
   GST_OBJECT_FLAG_SET (source, GNL_OBJECT_SOURCE);
   source->element = NULL;
-  source->priv = g_new0 (GnlSourcePrivate, 1);
+  source->priv =
+      G_TYPE_INSTANCE_GET_PRIVATE (source, GNL_TYPE_SOURCE, GnlSourcePrivate);
 
   if (g_object_class_find_property (G_OBJECT_CLASS (parent_class),
           "async-handling")) {
@@ -172,18 +173,6 @@ gnl_source_dispose (GObject * object)
   }
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
-}
-
-static void
-gnl_source_finalize (GObject * object)
-{
-  GnlSource *source = (GnlSource *) object;
-
-  GST_DEBUG_OBJECT (object, "finalize");
-
-  g_free (source->priv);
-
-  G_OBJECT_CLASS (parent_class)->finalize (object);
 }
 
 static gboolean
