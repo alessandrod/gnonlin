@@ -247,6 +247,8 @@ gnl_composition_class_init (GnlCompositionClass * klass)
   GST_DEBUG_CATEGORY_INIT (gnlcomposition, "gnlcomposition",
       GST_DEBUG_FG_BLUE | GST_DEBUG_BOLD, "GNonLin Composition");
 
+  g_type_class_add_private (klass, sizeof (GnlCompositionPrivate));
+
   gobject_class->dispose = GST_DEBUG_FUNCPTR (gnl_composition_dispose);
   gobject_class->finalize = GST_DEBUG_FUNCPTR (gnl_composition_finalize);
   gobject_class->set_property =
@@ -310,7 +312,9 @@ gnl_composition_init (GnlComposition * comp,
 {
   GST_OBJECT_FLAG_SET (comp, GNL_OBJECT_SOURCE);
 
-  comp->priv = g_new0 (GnlCompositionPrivate, 1);
+  comp->priv =
+      G_TYPE_INSTANCE_GET_PRIVATE (comp, GNL_TYPE_COMPOSITION,
+      GnlCompositionPrivate);
   comp->priv->objects_lock = g_mutex_new ();
   comp->priv->objects_start = NULL;
   comp->priv->objects_stop = NULL;
@@ -391,9 +395,6 @@ gnl_composition_finalize (GObject * object)
   gst_segment_free (comp->priv->outside_segment);
 
   g_mutex_free (comp->priv->flushing_lock);
-
-
-  g_free (comp->priv);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
