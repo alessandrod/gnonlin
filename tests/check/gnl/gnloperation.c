@@ -23,7 +23,7 @@ GST_START_TEST (test_simple_operation)
      Priority : 1
    */
 
-  source = videotest_gnl_src ("source", 0, 3 * GST_SECOND, 1, 1);
+  source = videotest_gnl_src ("source", 0, 3 * GST_SECOND, 2, 1);
   fail_if (source == NULL);
   check_start_stop_duration (source, 0, 3 * GST_SECOND, 3 * GST_SECOND);
 
@@ -228,7 +228,7 @@ GST_START_TEST (test_pyramid_operations)
      Priority : 2
    */
 
-  source = videotest_gnl_src ("source", 0, 10 * GST_SECOND, 1, 2);
+  source = videotest_gnl_src ("source", 0, 10 * GST_SECOND, 2, 2);
   check_start_stop_duration (source, 0, 10 * GST_SECOND, 10 * GST_SECOND);
 
   /*
@@ -449,7 +449,7 @@ GST_START_TEST (test_pyramid_operations2)
      Priority : 2
    */
 
-  source1 = videotest_gnl_src ("source1", 0, 2 * GST_SECOND, 1, 2);
+  source1 = videotest_gnl_src ("source1", 0, 2 * GST_SECOND, 2, 2);
   check_start_stop_duration (source1, 0, 2 * GST_SECOND, 2 * GST_SECOND);
 
   /*
@@ -470,7 +470,7 @@ GST_START_TEST (test_pyramid_operations2)
      Priority : 2
    */
 
-  source2 = videotest_gnl_src ("source2", 4 * GST_SECOND, 2 * GST_SECOND, 1, 2);
+  source2 = videotest_gnl_src ("source2", 4 * GST_SECOND, 2 * GST_SECOND, 2, 2);
   check_start_stop_duration (source2, 4 * GST_SECOND, 6 * GST_SECOND,
       2 * GST_SECOND);
 
@@ -479,7 +479,7 @@ GST_START_TEST (test_pyramid_operations2)
      Priority = G_MAXUINT32
    */
   def =
-      videotest_gnl_src ("default", 0 * GST_SECOND, 0 * GST_SECOND, 1,
+      videotest_gnl_src ("default", 0 * GST_SECOND, 0 * GST_SECOND, 2,
       G_MAXUINT32);
 
   ASSERT_OBJECT_REFCOUNT (source1, "source1", 1);
@@ -678,7 +678,7 @@ GST_START_TEST (test_pyramid_operations_expandable)
      Priority : 2
    */
 
-  source1 = videotest_gnl_src ("source1", 0, 2 * GST_SECOND, 1, 2);
+  source1 = videotest_gnl_src ("source1", 0, 2 * GST_SECOND, 2, 2);
   check_start_stop_duration (source1, 0, 2 * GST_SECOND, 2 * GST_SECOND);
 
   /*
@@ -700,7 +700,7 @@ GST_START_TEST (test_pyramid_operations_expandable)
      Priority : 2
    */
 
-  source2 = videotest_gnl_src ("source2", 4 * GST_SECOND, 2 * GST_SECOND, 1, 2);
+  source2 = videotest_gnl_src ("source2", 4 * GST_SECOND, 2 * GST_SECOND, 2, 2);
   check_start_stop_duration (source2, 4 * GST_SECOND, 6 * GST_SECOND,
       2 * GST_SECOND);
 
@@ -709,7 +709,7 @@ GST_START_TEST (test_pyramid_operations_expandable)
      Priority = G_MAXUINT32
    */
   def =
-      videotest_gnl_src ("default", 0 * GST_SECOND, 0 * GST_SECOND, 1,
+      videotest_gnl_src ("default", 0 * GST_SECOND, 0 * GST_SECOND, 2,
       G_MAXUINT32);
 
   ASSERT_OBJECT_REFCOUNT (source1, "source1", 1);
@@ -900,7 +900,7 @@ GST_START_TEST (test_complex_operations)
      Priority : 3
    */
 
-  source1 = videotest_in_bin_gnl_src ("source1", 0, 4 * GST_SECOND, 1, 3);
+  source1 = videotest_in_bin_gnl_src ("source1", 0, 4 * GST_SECOND, 2, 3);
   if (source1 == NULL) {
     gst_object_unref (pipeline);
     gst_object_unref (comp);
@@ -1118,7 +1118,7 @@ GST_START_TEST (test_complex_operations_bis)
      Priority : 2
    */
 
-  source1 = videotest_in_bin_gnl_src ("source1", 0, 4 * GST_SECOND, 1, 2);
+  source1 = videotest_in_bin_gnl_src ("source1", 0, 4 * GST_SECOND, 3, 2);
   if (source1 == NULL) {
     gst_object_unref (pipeline);
     gst_object_unref (comp);

@@ -85,7 +85,7 @@ GST_START_TEST (test_change_object_start_stop_in_current_stack)
      Priority : 2
    */
 
-  source1 = videotest_gnl_src ("source1", 0, 2 * GST_SECOND, 1, 2);
+  source1 = videotest_gnl_src ("source1", 0, 2 * GST_SECOND, 2, 2);
   g_object_connect (source1, "signal::pad-added",
       on_source1_pad_added_cb, NULL, NULL);
 
@@ -96,7 +96,7 @@ GST_START_TEST (test_change_object_start_stop_in_current_stack)
      Priority = G_MAXUINT32
    */
   def =
-      videotest_gnl_src ("default", 0 * GST_SECOND, 0 * GST_SECOND, 1,
+      videotest_gnl_src ("default", 0 * GST_SECOND, 0 * GST_SECOND, 2,
       G_MAXUINT32);
 
   ASSERT_OBJECT_REFCOUNT (source1, "source1", 1);

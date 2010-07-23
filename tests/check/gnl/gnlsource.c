@@ -21,7 +21,7 @@ GST_START_TEST (test_simple_videotestsrc)
      Priority : 1
    */
   gnlsource =
-      videotest_gnl_src ("source1", 1 * GST_SECOND, 1 * GST_SECOND, 1, 1);
+      videotest_gnl_src ("source1", 1 * GST_SECOND, 1 * GST_SECOND, 2, 1);
   fail_if (gnlsource == NULL);
   check_start_stop_duration (gnlsource, 1 * GST_SECOND, 2 * GST_SECOND,
       1 * GST_SECOND);
@@ -126,7 +126,7 @@ GST_START_TEST (test_videotestsrc_in_bin)
      Duration : 1s
      Priority : 1
    */
-  gnlsource = videotest_in_bin_gnl_src ("source1", 0, 1 * GST_SECOND, 1, 1);
+  gnlsource = videotest_in_bin_gnl_src ("source1", 0, 1 * GST_SECOND, 2, 1);
   /* Handle systems which don't have alpha available */
   if (gnlsource == NULL)
     return;

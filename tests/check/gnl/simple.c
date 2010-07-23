@@ -21,7 +21,7 @@ test_time_duration_full (gboolean async)
      Duration : 1s
      Priority : 1
    */
-  source1 = videotest_gnl_src ("source1", 0, 1 * GST_SECOND, 1, 1);
+  source1 = videotest_gnl_src ("source1", 0, 1 * GST_SECOND, 3, 1);
   fail_if (source1 == NULL);
   check_start_stop_duration (source1, 0, 1 * GST_SECOND, 1 * GST_SECOND);
 
@@ -108,7 +108,7 @@ test_one_after_other_full (gboolean async)
    */
   source1 =
       videotest_gnl_src_full ("source1", 0, 1 * GST_SECOND, 5 * GST_SECOND,
-      1 * GST_SECOND, 1, 1);
+      1 * GST_SECOND, 3, 1);
   fail_if (source1 == NULL);
   check_start_stop_duration (source1, 0, 1 * GST_SECOND, 1 * GST_SECOND);
 
@@ -317,7 +317,7 @@ test_one_under_another_full (gboolean async)
      Duration : 2s
      Priority : 1
    */
-  source1 = videotest_gnl_src ("source1", 0, 2 * GST_SECOND, 1, 1);
+  source1 = videotest_gnl_src ("source1", 0, 2 * GST_SECOND, 3, 1);
   fail_if (source1 == NULL);
   check_start_stop_duration (source1, 0, 2 * GST_SECOND, 2 * GST_SECOND);
 
@@ -453,7 +453,7 @@ test_one_bin_after_other_full (gboolean async)
      Duration : 1s
      Priority : 1
    */
-  source1 = videotest_in_bin_gnl_src ("source1", 0, 1 * GST_SECOND, 1, 1);
+  source1 = videotest_in_bin_gnl_src ("source1", 0, 1 * GST_SECOND, 3, 1);
   if (source1 == NULL) {
     gst_object_unref (pipeline);
     gst_object_unref (comp);
