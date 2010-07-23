@@ -303,7 +303,7 @@ hash_value_destroy (GnlCompositionEntry * entry)
 
   if (entry->nomorepadshandler)
     g_signal_handler_disconnect (entry->object, entry->nomorepadshandler);
-  g_free (entry);
+  g_slice_free (GnlCompositionEntry, entry);
 }
 
 static void
@@ -2487,7 +2487,7 @@ gnl_composition_add_object (GstBin * bin, GstElement * element)
   gst_element_set_locked_state (element, TRUE);
 
   /* wrap new element in a GnlCompositionEntry ... */
-  entry = g_new0 (GnlCompositionEntry, 1);
+  entry = g_slice_new0 (GnlCompositionEntry);
   entry->object = (GnlObject *) element;
   if (G_LIKELY ((GNL_OBJECT_PRIORITY (element) != G_MAXUINT32) &&
           !GNL_OBJECT_IS_EXPANDABLE (element))) {
