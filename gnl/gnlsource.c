@@ -137,11 +137,8 @@ gnl_source_init (GnlSource * source, GnlSourceClass * klass G_GNUC_UNUSED)
   source->priv =
       G_TYPE_INSTANCE_GET_PRIVATE (source, GNL_TYPE_SOURCE, GnlSourcePrivate);
 
-  if (g_object_class_find_property (G_OBJECT_CLASS (parent_class),
-          "async-handling")) {
-    GST_DEBUG_OBJECT (source, "Setting GstBin async-handling to TRUE");
-    g_object_set (G_OBJECT (source), "async-handling", TRUE, NULL);
-  }
+  GST_DEBUG_OBJECT (source, "Setting GstBin async-handling to TRUE");
+  g_object_set (G_OBJECT (source), "async-handling", TRUE, NULL);
 }
 
 static void
