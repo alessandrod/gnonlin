@@ -992,7 +992,7 @@ gnl_composition_event_handler (GstPad * ghostpad, GstEvent * event)
             comp->priv->segment_start - comp->priv->outside_segment->start;
         GST_DEBUG ("curdiff %" GST_TIME_FORMAT, GST_TIME_ARGS (curdiff));
         if ((curdiff != 0) && ((timestamp < curdiff)
-                || (curdiff < timestamp - diff))) {
+                || (curdiff > timestamp + diff))) {
           GST_DEBUG_OBJECT (comp,
               "QoS event outside of current segment, discarding");
           /* The QoS timestamp is before the currently set-up pipeline */
