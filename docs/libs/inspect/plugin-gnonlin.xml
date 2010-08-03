@@ -3,10 +3,10 @@
   <description>Standard elements for non-linear multimedia editing</description>
   <filename>../../gnl/.libs/libgnl.so</filename>
   <basename>libgnl.so</basename>
-  <version>0.10.13</version>
+  <version>0.10.15.1</version>
   <license>LGPL</license>
   <source>gnonlin</source>
-  <package>GNonLin source release</package>
+  <package>GNonLin git</package>
   <origin>Unknown package origin</origin>
   <elements>
     <element>

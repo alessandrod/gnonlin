@@ -44,7 +44,7 @@
 <RANGE>>= 0</RANGE>
 <FLAGS>rw</FLAGS>
 <NICK>Duration</NICK>
-<BLURB>Outgoing duration.</BLURB>
+<BLURB>Outgoing duration (in nanoseconds).</BLURB>
 <DEFAULT>0</DEFAULT>
 </ARG>
 
@@ -54,7 +54,7 @@
 <RANGE></RANGE>
 <FLAGS>rw</FLAGS>
 <NICK>Media duration</NICK>
-<BLURB>Duration of the media, can be negative.</BLURB>
+<BLURB>Duration of the media (in nanoseconds), can be negative.</BLURB>
 <DEFAULT>0</DEFAULT>
 </ARG>
 
@@ -64,7 +64,7 @@
 <RANGE></RANGE>
 <FLAGS>rw</FLAGS>
 <NICK>Media start</NICK>
-<BLURB>The media start position.</BLURB>
+<BLURB>The media start position (in nanoseconds).</BLURB>
 <DEFAULT>18446744073709551615</DEFAULT>
 </ARG>
 
@@ -74,7 +74,7 @@
 <RANGE></RANGE>
 <FLAGS>r</FLAGS>
 <NICK>Media stop</NICK>
-<BLURB>The media stop position.</BLURB>
+<BLURB>The media stop position (in nanoseconds).</BLURB>
 <DEFAULT>18446744073709551615</DEFAULT>
 </ARG>
 
@@ -94,7 +94,7 @@
 <RANGE></RANGE>
 <FLAGS>r</FLAGS>
 <NICK>Rate</NICK>
-<BLURB>Playback rate of the media.</BLURB>
+<BLURB>Playback rate of the media (1.0 : standard forward).</BLURB>
 <DEFAULT>1</DEFAULT>
 </ARG>
 
@@ -104,7 +104,7 @@
 <RANGE></RANGE>
 <FLAGS>rw</FLAGS>
 <NICK>Start</NICK>
-<BLURB>The start position relative to the parent.</BLURB>
+<BLURB>The start position relative to the parent (in nanoseconds).</BLURB>
 <DEFAULT>0</DEFAULT>
 </ARG>
 
@@ -114,7 +114,7 @@
 <RANGE></RANGE>
 <FLAGS>r</FLAGS>
 <NICK>Stop</NICK>
-<BLURB>The stop position relative to the parent.</BLURB>
+<BLURB>The stop position relative to the parent (in nanoseconds).</BLURB>
 <DEFAULT>0</DEFAULT>
 </ARG>
 
@@ -144,7 +144,7 @@
 <RANGE></RANGE>
 <FLAGS>rw</FLAGS>
 <NICK>Uri</NICK>
-<BLURB>URI of the resource to use.</BLURB>
+<BLURB>Uri of the file to use.</BLURB>
 <DEFAULT>NULL</DEFAULT>
 </ARG>
 
