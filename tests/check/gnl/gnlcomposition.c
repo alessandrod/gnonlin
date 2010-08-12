@@ -18,6 +18,12 @@
  */
 #include "common.h"
 
+typedef struct
+{
+  GstElement *composition;
+  GstElement *source3;
+} TestClosure;
+
 static int composition_pad_added;
 static int composition_pad_removed;
 static int seek_events;
@@ -233,6 +239,173 @@ GST_START_TEST (test_remove_invalid_object)
 
 GST_END_TEST;
 
+static void
+pad_block (GstPad * pad, gboolean blocked, gpointer user_data)
+{
+  GstPad *ghost;
+  GstBin *bin;
+
+  if (!blocked)
+    return;
+
+  bin = GST_BIN (user_data);
+
+  ghost = gst_ghost_pad_new ("src", pad);
+  gst_pad_set_active (ghost, TRUE);
+
+  gst_element_add_pad (GST_ELEMENT (bin), ghost);
+
+  gst_pad_set_blocked_async (pad, FALSE, pad_block, NULL);
+}
+
+static void
+no_more_pads_test_cb (GObject * object, TestClosure * c)
+{
+  GstElement *source2 = GST_ELEMENT (object);
+
+  GST_WARNING ("NO MORE PADS");
+  gst_bin_add (GST_BIN (c->composition), c->source3);
+}
+
+GST_START_TEST (test_no_more_pads_race)
+{
+  GstElement *source1, *source2, *source3;
+  GstBin *bin;
+  GstElement *videotestsrc1, *videotestsrc2, *videotestsrc3;
+  GstElement *operation;
+  GstElement *composition;
+  GstElement *videomixer, *fakesink;
+  GstElement *pipeline;
+  GstBus *bus;
+  GstMessage *message;
+  GstPad *pad;
+  TestClosure closure;
+
+  /* We create a composition with an operation and three sources. The operation
+   * contains a videomixer instance and the three sources are videotestsrc's.
+   *
+   * One of the sources, source2, contains videotestsrc inside a bin. Initially
+   * the bin doesn't have a source pad. We do this to exercise the dynamic src
+   * pad code path in gnlcomposition. We block on the videotestsrc srcpad and in
+   * the pad block callback we ghost the pad and add the ghost to the parent
+   * bin. This makes gnlsource emit no-more-pads, which is used by
+   * gnlcomposition to link the source2:src pad to videomixer.
+   *
+   * We start with the composition containing operation and source1. We preroll
+   * and then add source2. Source2 will do what described above and emit
+   * no-more-pads. We connect to that no-more-pads and from there we add source3 to
+   * the composition. Adding a new source will make gnlcomposition deactivate
+   * the old stack and activate a new one. The new one contains operation,
+   * source1, source2 and source3. Source2 was active in the old stack as well and
+   * gnlcomposition is *still waiting* for no-more-pads to be emitted on it
+   * (since the no-more-pads emission is now blocked in our test's no-more-pads
+   * callback, calling gst_bin_add). In short, here, we're simulating a race between
+   * no-more-pads and someone modifying the composition.
+   *
+   * Activating the new stack, gnlcomposition calls compare_relink_single_node,
+   * which finds an existing source pad for source2 this time since we have
+   * already blocked and ghosted. It takes another code path that assumes that
+   * source2 doesn't have dynamic pads and *BOOM*.
+   */
+
+  pipeline = GST_ELEMENT (gst_pipeline_new (NULL));
+  bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
+
+  composition = gst_element_factory_make ("gnlcomposition", "composition");
+  fakesink = gst_element_factory_make ("fakesink", NULL);
+  g_object_set (fakesink, "sync", TRUE, NULL);
+
+  /* operation */
+  operation = gst_element_factory_make ("gnloperation", "operation");
+  videomixer = gst_element_factory_make ("videomixer", "videomixer");
+  gst_bin_add (GST_BIN (operation), videomixer);
+  g_object_set (operation, "start", 0 * GST_SECOND, "duration", 20 * GST_SECOND,
+      "media-start", 0 * GST_SECOND, "media-duration", 20 * GST_SECOND,
+      "priority", 10, NULL);
+  gst_bin_add (GST_BIN (composition), operation);
+
+  /* source 1 */
+  source1 = gst_element_factory_make ("gnlsource", "source1");
+  videotestsrc1 = gst_element_factory_make ("videotestsrc", "videotestsrc1");
+  gst_bin_add (GST_BIN (source1), videotestsrc1);
+  g_object_set (source1, "start", 0 * GST_SECOND, "duration", 10 * GST_SECOND,
+      "media-start", 0 * GST_SECOND, "media-duration", 10 * GST_SECOND,
+      "priority", 20, NULL);
+
+  /* source2 */
+  source2 = gst_element_factory_make ("gnlsource", "source2");
+  bin = GST_BIN (gst_bin_new (NULL));
+  videotestsrc2 = gst_element_factory_make ("videotestsrc", "videotestsrc2");
+  pad = gst_element_get_static_pad (videotestsrc2, "src");
+  gst_pad_set_blocked_async (pad, TRUE, pad_block, bin);
+  gst_bin_add (bin, videotestsrc2);
+  gst_bin_add (GST_BIN (source2), GST_ELEMENT (bin));
+  g_object_set (source2, "start", 0 * GST_SECOND, "duration", 10 * GST_SECOND,
+      "media-start", 0 * GST_SECOND, "media-duration", 10 * GST_SECOND,
+      "priority", 20, NULL);
+
+  /* source3 */
+  source3 = gst_element_factory_make ("gnlsource", "source3");
+  videotestsrc2 = gst_element_factory_make ("videotestsrc", "videotestsrc3");
+  gst_bin_add (GST_BIN (source3), videotestsrc2);
+  g_object_set (source3, "start", 0 * GST_SECOND, "duration", 10 * GST_SECOND,
+      "media-start", 0 * GST_SECOND, "media-duration", 10 * GST_SECOND,
+      "priority", 20, NULL);
+
+  closure.composition = composition;
+  closure.source3 = source3;
+  g_object_connect (source2, "signal::no-more-pads",
+      no_more_pads_test_cb, &closure, NULL);
+
+  gst_bin_add (GST_BIN (composition), source1);
+  g_object_connect (composition, "signal::pad-added",
+      on_composition_pad_added_cb, fakesink, NULL);
+  g_object_connect (composition, "signal::pad-removed",
+      on_composition_pad_removed_cb, NULL, NULL);
+
+  gst_bin_add_many (GST_BIN (pipeline), composition, fakesink, NULL);
+
+  fail_if (gst_element_set_state (GST_ELEMENT (pipeline), GST_STATE_PAUSED)
+      == GST_STATE_CHANGE_FAILURE);
+
+  message = gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE,
+      GST_MESSAGE_ASYNC_DONE | GST_MESSAGE_ERROR);
+  if (GST_MESSAGE_TYPE (message) == GST_MESSAGE_ERROR) {
+    GError *error;
+    gchar *debug;
+
+    gst_message_parse_error (message, &error, &debug);
+    fail_if (TRUE, "error: %s - %s", error->message, debug);
+  }
+  gst_message_unref (message);
+
+  /* FIXME: maybe slow down the videotestsrc steaming thread */
+  gst_bin_add (GST_BIN (composition), source2);
+  //g_object_set (source1, "start", 5 * GST_SECOND, NULL);
+
+  message = gst_bus_timed_pop_filtered (bus, 1 * GST_SECOND, GST_MESSAGE_ERROR);
+  if (message) {
+    if (GST_MESSAGE_TYPE (message) == GST_MESSAGE_ERROR) {
+      GError *error;
+      gchar *debug;
+
+      gst_message_parse_error (message, &error, &debug);
+      fail_if (TRUE, error->message);
+    } else {
+      fail_if (TRUE);
+    }
+
+    gst_message_unref (message);
+  }
+
+
+  gst_element_set_state (GST_ELEMENT (pipeline), GST_STATE_NULL);
+  gst_object_unref (pipeline);
+  gst_object_unref (bus);
+}
+
+GST_END_TEST;
+
 Suite *
 gnonlin_suite (void)
 {
@@ -243,6 +416,7 @@ gnonlin_suite (void)
 
   tcase_add_test (tc_chain, test_change_object_start_stop_in_current_stack);
   tcase_add_test (tc_chain, test_remove_invalid_object);
+  tcase_add_test (tc_chain, test_no_more_pads_race);
 
   return s;
 }
