@@ -160,6 +160,8 @@ static void gnl_composition_set_update (GnlComposition * comp, gboolean update);
 static gboolean update_pipeline (GnlComposition * comp,
     GstClockTime currenttime, gboolean initial, gboolean change_state,
     gboolean modify);
+static void no_more_pads_object_cb (GstElement * element,
+    GnlComposition * comp);
 
 
 /* COMP_REAL_START: actual position to start current playback at. */
@@ -431,6 +433,28 @@ gnl_composition_get_property (GObject * object, guint prop_id,
   }
 }
 
+static void
+wait_no_more_pads (GnlComposition * comp, gpointer object,
+    GnlCompositionEntry * entry, gboolean wait)
+{
+  if (wait) {
+    GST_INFO_OBJECT (object, "no existing pad, connecting to 'no-more-pads'");
+    entry->nomorepadshandler = g_signal_connect
+        (G_OBJECT (object), "no-more-pads",
+        G_CALLBACK (no_more_pads_object_cb), comp);
+    comp->priv->waitingpads++;
+  } else {
+    GST_INFO_OBJECT (object, "disconnecting from 'no-more-pads'");
+    g_signal_handler_disconnect (object, entry->nomorepadshandler);
+    entry->nomorepadshandler = 0;
+    comp->priv->waitingpads--;
+  }
+
+
+  GST_INFO_OBJECT (comp, "the number of waiting pads is now %d",
+      comp->priv->waitingpads);
+}
+
 /* signal_duration_change
  * Creates a new GST_MESSAGE_DURATION with the currently configured
  * composition duration and sends that on the bus.
@@ -480,12 +504,20 @@ retry:
 
 
 static gboolean
-unlock_child_state (GstElement * child, GValue * ret G_GNUC_UNUSED,
-    gpointer udata G_GNUC_UNUSED)
+reset_child (GstElement * child, GValue * ret G_GNUC_UNUSED, gpointer user_data)
 {
+  GnlComposition *comp = GNL_COMPOSITION (user_data);
+  GnlCompositionEntry *entry;
+
   GST_DEBUG_OBJECT (child, "unlocking state");
   gst_element_set_locked_state (child, FALSE);
+
+  entry = COMP_ENTRY (comp, child);
+  if (entry->nomorepadshandler)
+    wait_no_more_pads (comp, child, entry, FALSE);
+
   gst_object_unref (child);
+
   return TRUE;
 }
 
@@ -500,15 +532,15 @@ lock_child_state (GstElement * child, GValue * ret G_GNUC_UNUSED,
 }
 
 static void
-unlock_childs (GnlComposition * comp)
+reset_childs (GnlComposition * comp)
 {
   GstIterator *childs;
 
   childs = gst_bin_iterate_elements (GST_BIN (comp));
 retry:
   if (G_UNLIKELY (gst_iterator_fold (childs,
-              (GstIteratorFoldFunction) unlock_child_state, NULL,
-              NULL) == GST_ITERATOR_RESYNC)) {
+              (GstIteratorFoldFunction) reset_child, NULL,
+              comp) == GST_ITERATOR_RESYNC)) {
     gst_iterator_resync (childs);
     goto retry;
   }
@@ -543,9 +575,7 @@ gnl_composition_reset (GnlComposition * comp)
     comp->priv->childseek = NULL;
   }
 
-  comp->priv->waitingpads = 0;
-
-  unlock_childs (comp);
+  reset_childs (comp);
 
   COMP_FLUSHING_LOCK (comp);
   if (comp->priv->pending_idle)
@@ -1694,10 +1724,7 @@ no_more_pads_object_cb (GstElement * element, GnlComposition * comp)
 
   if (tmp) {
     GnlCompositionEntry *entry = COMP_ENTRY (comp, object);
-
-    comp->priv->waitingpads--;
-    GST_LOG_OBJECT (comp, "Number of waiting pads is now %d",
-        comp->priv->waitingpads);
+    wait_no_more_pads (comp, object, entry, FALSE);
 
     if (tmp->parent) {
       GstElement *parent = (GstElement *) tmp->parent->data;
@@ -1714,7 +1741,8 @@ no_more_pads_object_cb (GstElement * element, GnlComposition * comp)
       /* Link pad to parent sink pad */
       if (G_UNLIKELY (gst_pad_link_full (pad, sinkpad,
                   GST_PAD_LINK_CHECK_NOTHING) != GST_PAD_LINK_OK)) {
-        GST_WARNING_OBJECT (comp, "Failed to link pads, error:");
+        GST_WARNING_OBJECT (comp, "Failed to link pads %s:%s - %s:%s",
+            GST_DEBUG_PAD_NAME (pad), GST_DEBUG_PAD_NAME (sinkpad));
         gst_object_unref (sinkpad);
         goto done;
       }
@@ -1769,10 +1797,6 @@ no_more_pads_object_cb (GstElement * element, GnlComposition * comp)
         GST_DEBUG ("Element went away from currently configured stack");
       }
     }
-
-    /* deactivate nomorepads handler */
-    g_signal_handler_disconnect (object, entry->nomorepadshandler);
-    entry->nomorepadshandler = 0;
   } else {
     GST_LOG_OBJECT (comp,
         "The following object is not in currently configured stack : %s",
@@ -1817,7 +1841,8 @@ compare_relink_single_node (GnlComposition * comp, GNode * node,
   GnlObject *newobj;
   GnlObject *newparent;
   GnlObject *oldparent = NULL;
-  GstPad *srcpad = NULL;
+  GstPad *srcpad = NULL, *sinkpad = NULL;
+  GnlCompositionEntry *entry;
 
   if (!node)
     return;
@@ -1843,8 +1868,16 @@ compare_relink_single_node (GnlComposition * comp, GNode * node,
         comp);
   }
 
-  /* 2. link to parent if needed */
-  if (srcpad) {
+  entry = COMP_ENTRY (comp, newobj);
+
+  /* 2. link to parent if needed.
+   *
+   * If entry->nomorepadshandler is not zero, it means that srcpad didn't exist
+   * before and so we connected to no-more-pads. This can happen since there's a
+   * window of time between gnlsource adds its srcpad and then emits
+   * no-more-pads. In that case, we just wait for no-more-pads to be emitted.
+   */
+  if (srcpad && entry->nomorepadshandler == 0) {
     GST_LOG_OBJECT (comp, "has a valid source pad");
     /* POST PROCESSING */
     if ((oldparent != newparent) ||
@@ -1869,7 +1902,8 @@ compare_relink_single_node (GnlComposition * comp, GNode * node,
         } else {
           if (G_UNLIKELY (gst_pad_link_full (srcpad, sinkpad,
                       GST_PAD_LINK_CHECK_NOTHING) != GST_PAD_LINK_OK)) {
-            GST_WARNING_OBJECT (comp, "Failed to link pads");
+            GST_WARNING_OBJECT (comp, "Failed to link pads %s - %s",
+                GST_DEBUG_PAD_NAME (srcpad), GST_DEBUG_PAD_NAME (sinkpad));
           }
           gst_object_unref (sinkpad);
         }
@@ -1879,21 +1913,17 @@ compare_relink_single_node (GnlComposition * comp, GNode * node,
 
     /* If there's an operation, inform it about priority changes */
     if (newparent) {
-      GstPad *sinkpad = gst_pad_get_peer (srcpad);
+      sinkpad = gst_pad_get_peer (srcpad);
       gnl_operation_signal_input_priority_changed ((GnlOperation *) newparent,
           sinkpad, newobj->priority);
       gst_object_unref (sinkpad);
     }
 
+  } else if (entry->nomorepadshandler) {
+    GST_INFO_OBJECT (newobj,
+        "we have a pad but we are connected to 'no-more-pads'");
   } else {
-    GnlCompositionEntry *entry = COMP_ENTRY (comp, newobj);
-
-    GST_LOG_OBJECT (newobj, "no existing pad, connecting to 'no-more-pads'");
-    comp->priv->waitingpads++;
-    if (!(entry->nomorepadshandler))
-      entry->nomorepadshandler = g_signal_connect
-          (G_OBJECT (newobj), "no-more-pads",
-          G_CALLBACK (no_more_pads_object_cb), comp);
+    wait_no_more_pads (comp, newobj, entry, TRUE);
   }
 
   /* 3. Handle childs */
@@ -1924,7 +1954,7 @@ compare_relink_single_node (GnlComposition * comp, GNode * node,
   }
 
   /* 4. Unblock source pad */
-  if (srcpad && !G_NODE_IS_ROOT (node)) {
+  if ((srcpad && entry->nomorepadshandler == 0) && !G_NODE_IS_ROOT (node)) {
     GST_LOG_OBJECT (comp, "Unblocking pad %s:%s", GST_DEBUG_PAD_NAME (srcpad));
     gst_pad_set_blocked_async (srcpad, FALSE,
         (GstPadBlockCallback) pad_blocked, comp);
@@ -2091,15 +2121,12 @@ compare_relink_stack (GnlComposition * comp, GNode * stack, gboolean modify)
 {
   GList *deactivate = NULL;
 
-  /* 1. reset waiting pads for new stack */
-  comp->priv->waitingpads = 0;
-
-  /* 2. Traverse old stack to deactivate no longer used objects */
+  /* 1. Traverse old stack to deactivate no longer used objects */
 
   deactivate =
       compare_deactivate_single_node (comp, comp->priv->current, stack, modify);
 
-  /* 3. Traverse new stack to do needed (re)links */
+  /* 2. Traverse new stack to do needed (re)links */
 
   compare_relink_single_node (comp, stack, comp->priv->current);
 
@@ -2251,14 +2278,24 @@ update_pipeline (GnlComposition * comp, GstClockTime currenttime,
 
     if (deactivate) {
       GList *tmp;
+      GnlCompositionEntry *entry;
+      GstElement *element;
 
       GST_DEBUG_OBJECT (comp, "De-activating objects no longer used");
 
       /* state-lock elements no more used */
       for (tmp = deactivate; tmp; tmp = g_list_next (tmp)) {
+        element = GST_ELEMENT_CAST (tmp->data);
+
         if (change_state)
-          gst_element_set_state (GST_ELEMENT (tmp->data), state);
-        gst_element_set_locked_state (GST_ELEMENT (tmp->data), TRUE);
+          gst_element_set_state (element, state);
+        gst_element_set_locked_state (element, TRUE);
+        entry = COMP_ENTRY (comp, element);
+        /* entry can be NULL here if update_pipeline was called by
+         * gnl_composition_remove_object (comp, tmp->data)
+         */
+        if (entry && entry->nomorepadshandler)
+          wait_no_more_pads (comp, element, entry, FALSE);
       }
       g_list_free (deactivate);
 
@@ -2602,6 +2639,7 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
   GstClockTime curpos = GST_CLOCK_TIME_NONE;
   gboolean ret = FALSE;
   gboolean update_required;
+  GnlCompositionEntry *entry;
 
   GST_DEBUG_OBJECT (bin, "element %s", GST_OBJECT_NAME (element));
   /* we only accept GnlObject */
@@ -2614,6 +2652,8 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
     COMP_OBJECTS_UNLOCK (comp);
     goto out;
   }
+  if (entry->nomorepadshandler)
+    wait_no_more_pads (comp, element, entry, FALSE);
 
   gst_object_ref (element);
 
@@ -2663,7 +2703,6 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
 
   GST_LOG_OBJECT (element, "Done removing from the composition");
 
-beach:
   /* unblock source pad */
   if (1) {
     GstPad *pad = get_src_pad (element);

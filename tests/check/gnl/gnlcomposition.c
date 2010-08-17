@@ -381,7 +381,6 @@ GST_START_TEST (test_no_more_pads_race)
 
   /* FIXME: maybe slow down the videotestsrc steaming thread */
   gst_bin_add (GST_BIN (composition), source2);
-  //g_object_set (source1, "start", 5 * GST_SECOND, NULL);
 
   message = gst_bus_timed_pop_filtered (bus, 1 * GST_SECOND, GST_MESSAGE_ERROR);
   if (message) {
@@ -397,7 +396,6 @@ GST_START_TEST (test_no_more_pads_race)
 
     gst_message_unref (message);
   }
-
 
   gst_element_set_state (GST_ELEMENT (pipeline), GST_STATE_NULL);
   gst_object_unref (pipeline);
