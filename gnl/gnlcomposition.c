@@ -2600,7 +2600,7 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
 {
   GnlComposition *comp = (GnlComposition *) bin;
   GstClockTime curpos = GST_CLOCK_TIME_NONE;
-  gboolean ret = GST_STATE_CHANGE_FAILURE;
+  gboolean ret = FALSE;
   gboolean update_required;
 
   GST_DEBUG_OBJECT (bin, "element %s", GST_OBJECT_NAME (element));
