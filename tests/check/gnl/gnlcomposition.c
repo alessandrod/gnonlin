@@ -214,6 +214,25 @@ GST_START_TEST (test_change_object_start_stop_in_current_stack)
 
 GST_END_TEST;
 
+GST_START_TEST (test_remove_invalid_object)
+{
+  GstBin *composition;
+  GstElement *source1, *source2;
+
+  composition = GST_BIN (gst_element_factory_make ("gnlcomposition",
+          "composition"));
+  source1 = gst_element_factory_make ("gnlsource", "source1");
+  source2 = gst_element_factory_make ("gnlsource", "source2");
+
+  gst_bin_add (composition, source1);
+  fail_if (gst_bin_remove (composition, source2));
+  fail_unless (gst_bin_remove (composition, source1));
+
+  gst_object_unref (composition);
+}
+
+GST_END_TEST;
+
 Suite *
 gnonlin_suite (void)
 {
@@ -223,6 +242,7 @@ gnonlin_suite (void)
   suite_add_tcase (s, tc_chain);
 
   tcase_add_test (tc_chain, test_change_object_start_stop_in_current_stack);
+  tcase_add_test (tc_chain, test_remove_invalid_object);
 
   return s;
 }

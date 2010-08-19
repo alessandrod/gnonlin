@@ -2609,6 +2609,12 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
 
   COMP_OBJECTS_LOCK (comp);
 
+  entry = COMP_ENTRY (comp, element);
+  if (entry == NULL) {
+    COMP_OBJECTS_UNLOCK (comp);
+    goto out;
+  }
+
   gst_object_ref (element);
 
   gst_element_set_locked_state (element, FALSE);
@@ -2629,8 +2635,7 @@ gnl_composition_remove_object (GstBin * bin, GstElement * element)
     GST_LOG_OBJECT (element, "Removed from the objects start/stop list");
   }
 
-  if (!(g_hash_table_remove (comp->priv->objects_hash, element)))
-    goto chiringuito;
+  g_hash_table_remove (comp->priv->objects_hash, element);
 
   update_required = OBJECT_IN_ACTIVE_SEGMENT (comp, element) ||
       (GNL_OBJECT_PRIORITY (element) == G_MAXUINT32) ||
@@ -2671,9 +2676,7 @@ beach:
   }
 
   gst_object_unref (element);
-  return ret;
 
-chiringuito:
-  COMP_OBJECTS_UNLOCK (comp);
-  goto beach;
+out:
+  return ret;
 }
