@@ -129,15 +129,10 @@ GST_START_TEST (test_change_object_start_stop_in_current_stack)
     message = gst_bus_poll (bus, GST_MESSAGE_ANY, GST_SECOND / 2);
     if (message) {
       switch (GST_MESSAGE_TYPE (message)) {
-        case GST_MESSAGE_STATE_CHANGED:
+        case GST_MESSAGE_ASYNC_DONE:
         {
-          GstState old, current, pending;
-          gst_message_parse_state_changed (message, &old, &current, &pending);
-
-          if (message->src == GST_OBJECT (pipeline)) {
-            if (current == GST_STATE_PAUSED)
-              carry_on = FALSE;
-          }
+          carry_on = FALSE;
+          GST_DEBUG ("Pipeline reached PAUSED, stopping polling");
           break;
         }
         case GST_MESSAGE_EOS:
@@ -180,7 +175,12 @@ GST_START_TEST (test_change_object_start_stop_in_current_stack)
   /* remove source1 from the composition, which will become empty and remove the
    * ghostpad */
   gst_bin_remove (GST_BIN (comp), source1);
-  ASSERT_OBJECT_REFCOUNT (source1, "source1", 1);
+  /* Since the element is still active (PAUSED), there might be internal
+   * refcounts still taking place, therefore we check if it's between
+   * 1 and 2.
+   * If we were to set it to NULL, it would be guaranteed to be 1, but
+   * it would then be racy for the checks below (when we re-add it) */
+  ASSERT_OBJECT_REFCOUNT_BETWEEN (source1, "source1", 1, 2);
 
   fail_unless_equals_int (composition_pad_added, 1);
   fail_unless_equals_int (composition_pad_removed, 1);
